@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+
+uploads/*
+!uploads/.gitkeep
+
+*.log
+.DS_Store
+
+node/node_modules/
