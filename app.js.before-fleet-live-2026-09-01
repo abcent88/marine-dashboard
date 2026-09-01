@@ -38,106 +38,8 @@ let sustainChart;
  * can still render if the API is temporarily unavailable.
  */
 const LIVE = {
-  summary: null,
-  vessels: []
+  summary: null
 };
-
-async function loadVessels(){
-  try {
-    const response = await fetch(`${API_BASE}/api/vessels`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json"
-      }
-    });
-
-    if(!response.ok){
-      throw new Error(`Vessels API returned HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if(!result.success || !Array.isArray(result.data)){
-      throw new Error("Invalid vessels API response");
-    }
-
-    LIVE.vessels = result.data;
-
-    console.log("Live vessel data loaded:", LIVE.vessels);
-
-    applyLiveVessels();
-
-    return true;
-  } catch(error) {
-    console.error("Unable to load live vessel data:", error);
-    return false;
-  }
-}
-
-function applyLiveVessels(){
-  if(!Array.isArray(LIVE.vessels)) return;
-
-  const active = LIVE.vessels.filter(
-    vessel => vessel.status === "active"
-  ).length;
-
-  const restricted = LIVE.vessels.filter(
-    vessel => vessel.status === "restricted"
-  ).length;
-
-  const maintenance = LIVE.vessels.filter(
-    vessel => vessel.status === "maintenance"
-  ).length;
-
-  const outOfService = LIVE.vessels.filter(
-    vessel => vessel.status === "out_of_service"
-  ).length;
-
-  const total = LIVE.vessels.length;
-
-  const totalCapacity = LIVE.vessels.reduce(
-    (sum, vessel) =>
-      sum + Number(vessel.capacityTons || 0),
-    0
-  );
-
-  $("activeShips").textContent = active;
-  $("activeShipsSub").textContent = `${active} / ${total}`;
-
-  $("statPracticable").textContent = active;
-  $("statRestricted").textContent = restricted;
-  $("statOut").textContent = outOfService;
-
-  $("totalCapacity").textContent =
-    totalCapacity.toLocaleString();
-
-  const activePct = pct(active, total);
-
-  $("capacityPct").textContent = `${activePct}%`;
-
-  $("capacityTons").textContent =
-    `${totalCapacity.toLocaleString()} t`;
-
-  if(capacityChart){
-    capacityChart.destroy();
-  }
-
-  capacityChart = makeDoughnut(
-    "capacityGauge",
-    active,
-    total,
-    78
-  );
-
-  console.log("Live fleet summary:", {
-    total,
-    active,
-    restricted,
-    maintenance,
-    outOfService,
-    totalCapacity
-  });
-}
 
 /*
  * Load the real dashboard summary from Node/Express.
@@ -784,11 +686,6 @@ async function init(){
         "./login.html";
     });
   }
-
-  /*
-   * Load real vessel records from MariaDB.
-   */
-  await loadVessels();
 
   /*
    * Replace mock fleet/operations figures
