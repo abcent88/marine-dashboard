@@ -332,34 +332,6 @@
         </div>
       </section>
 
-      <!-- Vessel Details -->
-      <section class="card glass wide vessel-details" id="vesselDetails">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Vessel Details</div>
-            <div class="muted small" id="vesselDetailsSubtitle">
-              Select a vessel from Fleet Operations
-            </div>
-          </div>
-
-          <button
-            type="button"
-            class="badge vessel-details-close"
-            id="closeVesselDetails"
-            hidden
-          >
-            Close
-          </button>
-        </div>
-
-        <div id="vesselDetailsContent">
-          <div class="vessel-details-empty muted">
-            Select a vessel from the Fleet Operations table to view
-            its operational profile.
-          </div>
-        </div>
-      </section>
-
       </main>
 
       <footer class="foot muted small">
