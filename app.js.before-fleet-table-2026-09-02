@@ -37,19 +37,6 @@ let sustainChart;
  * We start with the existing mock data so the dashboard
  * can still render if the API is temporarily unavailable.
  */
-/*
- * Safely escape database values before inserting them
- * into dynamically generated HTML.
- */
-function escapeHtml(value){
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 const LIVE = {
   summary: null,
   vessels: []
@@ -114,9 +101,6 @@ function applyLiveVessels(){
     0
   );
 
-  /*
-   * Update the existing Active Ships card.
-   */
   $("activeShips").textContent = active;
   $("activeShipsSub").textContent = `${active} / ${total}`;
 
@@ -144,114 +128,6 @@ function applyLiveVessels(){
     total,
     78
   );
-
-  /*
-   * Update Fleet Operations summary cards.
-   */
-  const fleetTotal = $("fleetTotalVessels");
-  const fleetActive = $("fleetActiveVessels");
-  const fleetRestricted = $("fleetRestrictedVessels");
-  const fleetMaintenance = $("fleetMaintenanceVessels");
-  const fleetOut = $("fleetOutVessels");
-  const fleetCapacity = $("fleetTotalCapacity");
-
-  if(fleetTotal) fleetTotal.textContent = total;
-  if(fleetActive) fleetActive.textContent = active;
-  if(fleetRestricted) fleetRestricted.textContent = restricted;
-  if(fleetMaintenance) fleetMaintenance.textContent = maintenance;
-  if(fleetOut) fleetOut.textContent = outOfService;
-
-  if(fleetCapacity){
-    fleetCapacity.textContent =
-      `${totalCapacity.toLocaleString()} t`;
-  }
-
-  /*
-   * Render real vessel records into Fleet Operations.
-   */
-  const fleetBody = $("fleetVesselsBody");
-
-  if(fleetBody){
-    if(LIVE.vessels.length === 0){
-      fleetBody.innerHTML = `
-        <tr>
-          <td colspan="7" class="muted">
-            No vessel records found.
-          </td>
-        </tr>
-      `;
-    } else {
-      fleetBody.innerHTML = LIVE.vessels.map(vessel => {
-        const status = String(vessel.status || "unknown");
-
-        const statusLabel = status
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, char => char.toUpperCase());
-
-        const statusClass = status === "out_of_service"
-          ? "out-of-service"
-          : status;
-
-        const vesselName =
-          escapeHtml(vessel.name || "Unnamed Vessel");
-
-        const vesselCode =
-          escapeHtml(vessel.vesselCode || "—");
-
-        const vesselType =
-          escapeHtml(vessel.vesselType || "—");
-
-        const flagCountry =
-          escapeHtml(vessel.flagCountry || "—");
-
-        const homePort =
-          escapeHtml(
-            vessel.homePort && vessel.homePort.name
-              ? vessel.homePort.name
-              : "—"
-          );
-
-        const capacity =
-          Number(vessel.capacityTons || 0).toLocaleString();
-
-        return `
-          <tr>
-            <td>
-              <div class="fleet-vessel-name">${vesselName}</div>
-            </td>
-
-            <td>
-              <span class="fleet-vessel-code">${vesselCode}</span>
-            </td>
-
-            <td>${vesselType}</td>
-
-            <td>${flagCountry}</td>
-
-            <td>${capacity} t</td>
-
-            <td>
-              <span class="fleet-status ${statusClass}">
-                <span class="fleet-status-dot"></span>
-                ${statusLabel}
-              </span>
-            </td>
-
-            <td>${homePort}</td>
-          </tr>
-        `;
-      }).join("");
-    }
-  }
-
-  /*
-   * Keep the Fleet Operations badge explicitly live.
-   */
-  const fleetBadge = $("fleetLiveBadge");
-
-  if(fleetBadge){
-    fleetBadge.textContent = "Live";
-  }
 
   console.log("Live fleet summary:", {
     total,
