@@ -12,6 +12,7 @@ const maintenanceRoutes = require("./routes/maintenance");
 const alertsRoutes = require("./routes/alerts");
 const crewRoutes = require("./routes/crew");
 const catchRoutes = require("./routes/catch");
+const reportsRoutes = require("./routes/reports");
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +41,7 @@ app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/crew", crewRoutes);
 app.use("/api/catch", catchRoutes);
+app.use("/api/reports", reportsRoutes);
 
 app.get("/health", (req, res) => {
   res.json({
