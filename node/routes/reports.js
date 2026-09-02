@@ -142,7 +142,7 @@ router.get("/summary", async (req, res) => {
 
       pool.query(`
         SELECT
-          metric_date,
+          DATE_FORMAT(metric_date, '%Y-%m-%d') AS metric_date,
           sales_amount,
           capture_kg,
           target_capture_kg,

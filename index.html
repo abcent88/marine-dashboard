@@ -767,6 +767,143 @@
   </div>
 </section>
 
+<!-- Reports & Analytics -->
+<section class="card glass wide reports-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Reports &amp; Analytics</div>
+      <div class="muted small">Live operational performance across fleet, production, fuel, voyages and maintenance</div>
+    </div>
+    <div class="badge" id="reportsLiveBadge">Live</div>
+  </div>
+
+  <div class="reports-summary">
+    <div class="reports-summary-item">
+      <span class="muted small">Fleet Capacity</span>
+      <strong id="reportFleetCapacity">0 tons</strong>
+    </div>
+
+    <div class="reports-summary-item">
+      <span class="muted small">Total Catch</span>
+      <strong id="reportTotalCatch">0 kg</strong>
+    </div>
+
+    <div class="reports-summary-item">
+      <span class="muted small">Catch Progress</span>
+      <strong id="reportCatchProgress">0%</strong>
+    </div>
+
+    <div class="reports-summary-item">
+      <span class="muted small">Fuel Consumed</span>
+      <strong id="reportFuelTotal">0 L</strong>
+    </div>
+
+    <div class="reports-summary-item">
+      <span class="muted small">Catch Efficiency</span>
+      <strong id="reportCatchEfficiency">0 kg/L</strong>
+    </div>
+
+    <div class="reports-summary-item">
+      <span class="muted small">Maintenance Cost</span>
+      <strong id="reportMaintenanceCost">₦0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="reports-grid">
+    <div class="reports-panel">
+      <div class="section-subtitle">Fleet Status</div>
+      <div id="reportFleetGrid" class="report-stat-grid">
+        <div class="muted small">Loading fleet report...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Voyage Performance</div>
+      <div id="reportVoyageGrid" class="report-stat-grid">
+        <div class="muted small">Loading voyage report...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Alert Status</div>
+      <div id="reportAlertGrid" class="report-stat-grid">
+        <div class="muted small">Loading alert report...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Crew Status</div>
+      <div id="reportCrewGrid" class="report-stat-grid">
+        <div class="muted small">Loading crew report...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="reports-grid reports-grid-secondary">
+    <div class="reports-panel">
+      <div class="section-subtitle">Production by Species</div>
+      <div id="reportSpeciesGrid" class="report-list">
+        <div class="muted small">Loading production report...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Production by Vessel</div>
+      <div id="reportCatchVesselGrid" class="report-list">
+        <div class="muted small">Loading vessel production...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Fuel by Vessel</div>
+      <div id="reportFuelVesselGrid" class="report-list">
+        <div class="muted small">Loading fuel report...</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <div class="section-subtitle">Maintenance by Vessel</div>
+      <div id="reportMaintenanceVesselGrid" class="report-list">
+        <div class="muted small">Loading maintenance report...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="reports-panel">
+    <div class="section-subtitle">Daily Performance</div>
+
+    <div class="reports-table-wrap">
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Sales</th>
+            <th>Catch</th>
+            <th>Target</th>
+            <th>Active Vessels</th>
+            <th>Fuel</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+
+        <tbody id="reportDailyBody">
+          <tr>
+            <td colspan="7" class="muted">
+              Loading daily performance...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 </main>
 
       <footer class="foot muted small">
