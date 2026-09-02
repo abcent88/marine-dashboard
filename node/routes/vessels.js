@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
         v.call_sign,
         v.capacity_tons,
         v.status,
-        v.commissioned_date,
+        DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
         v.created_at,
         v.updated_at,
         p.id AS home_port_id,
@@ -45,7 +45,9 @@ router.get("/", async (req, res) => {
       callSign: vessel.call_sign,
       capacityTons: Number(vessel.capacity_tons),
       status: vessel.status,
-      commissionedDate: vessel.commissioned_date,
+      commissionedDate: vessel.commissioned_date
+        ? String(vessel.commissioned_date).slice(0, 10)
+        : null,
       homePort: vessel.home_port_id
         ? {
             id: Number(vessel.home_port_id),
@@ -71,6 +73,431 @@ router.get("/", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Unable to load vessels"
+    });
+  }
+});
+
+
+/*
+ * POST /api/vessels
+ *
+ * Creates a new vessel.
+ */
+router.post("/", async (req, res) => {
+  try {
+    const {
+      vesselCode,
+      name,
+      vesselType,
+      flagCountry,
+      imoNumber,
+      callSign,
+      capacityTons,
+      status,
+      homePortId,
+      commissionedDate
+    } = req.body || {};
+
+    const normalizedCode = String(vesselCode || "").trim();
+    const normalizedName = String(name || "").trim();
+    const normalizedType = String(vesselType || "").trim();
+    const normalizedFlag = String(flagCountry || "").trim() || null;
+    const normalizedImo = String(imoNumber || "").trim() || null;
+    const normalizedCallSign = String(callSign || "").trim() || null;
+
+    if(!normalizedCode || !normalizedName || !normalizedType){
+      return res.status(400).json({
+        success: false,
+        error: "vesselCode, name and vesselType are required"
+      });
+    }
+
+    const allowedStatuses = [
+      "active",
+      "restricted",
+      "maintenance",
+      "out_of_service",
+      "retired"
+    ];
+
+    const normalizedStatus = String(status || "active").trim();
+
+    if(!allowedStatuses.includes(normalizedStatus)){
+      return res.status(400).json({
+        success: false,
+        error: "Invalid vessel status"
+      });
+    }
+
+    const numericCapacity = Number(capacityTons ?? 0);
+
+    if(!Number.isFinite(numericCapacity) || numericCapacity < 0){
+      return res.status(400).json({
+        success: false,
+        error: "capacityTons must be a non-negative number"
+      });
+    }
+
+    let normalizedHomePortId = null;
+
+    if(homePortId !== undefined && homePortId !== null && String(homePortId).trim() !== ""){
+      normalizedHomePortId = Number(homePortId);
+
+      if(!Number.isInteger(normalizedHomePortId) || normalizedHomePortId <= 0){
+        return res.status(400).json({
+          success: false,
+          error: "homePortId must be a positive integer"
+        });
+      }
+
+      const [portRows] = await pool.query(
+        "SELECT id FROM ports WHERE id = ? LIMIT 1",
+        [normalizedHomePortId]
+      );
+
+      if(portRows.length === 0){
+        return res.status(400).json({
+          success: false,
+          error: "Home port not found"
+        });
+      }
+    }
+
+    const normalizedCommissionedDate =
+      commissionedDate ? String(commissionedDate).trim() : null;
+
+    if(normalizedCommissionedDate && !/^\d{4}-\d{2}-\d{2}$/.test(normalizedCommissionedDate)){
+      return res.status(400).json({
+        success: false,
+        error: "commissionedDate must use YYYY-MM-DD format"
+      });
+    }
+
+    const [result] = await pool.query(`
+      INSERT INTO vessels (
+        vessel_code,
+        name,
+        vessel_type,
+        flag_country,
+        imo_number,
+        call_sign,
+        capacity_tons,
+        status,
+        home_port_id,
+        commissioned_date
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      normalizedCode,
+      normalizedName,
+      normalizedType,
+      normalizedFlag,
+      normalizedImo,
+      normalizedCallSign,
+      numericCapacity,
+      normalizedStatus,
+      normalizedHomePortId,
+      normalizedCommissionedDate
+    ]);
+
+    const [rows] = await pool.query(`
+      SELECT
+        v.id,
+        v.vessel_code,
+        v.name,
+        v.vessel_type,
+        v.flag_country,
+        v.imo_number,
+        v.call_sign,
+        v.capacity_tons,
+        v.status,
+        DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
+        v.created_at,
+        v.updated_at,
+        p.id AS home_port_id,
+        p.name AS home_port_name,
+        p.country AS home_port_country,
+        p.code AS home_port_code
+      FROM vessels v
+      LEFT JOIN ports p
+        ON p.id = v.home_port_id
+      WHERE v.id = ?
+      LIMIT 1
+    `, [result.insertId]);
+
+    const vessel = rows[0];
+
+    res.status(201).json({
+      success: true,
+      message: "Vessel created successfully",
+      data: {
+        id: Number(vessel.id),
+        vesselCode: vessel.vessel_code,
+        name: vessel.name,
+        vesselType: vessel.vessel_type,
+        flagCountry: vessel.flag_country,
+        imoNumber: vessel.imo_number,
+        callSign: vessel.call_sign,
+        capacityTons: Number(vessel.capacity_tons),
+        status: vessel.status,
+        commissionedDate: vessel.commissioned_date
+        ? String(vessel.commissioned_date).slice(0, 10)
+        : null,
+        homePort: vessel.home_port_id
+          ? {
+              id: Number(vessel.home_port_id),
+              name: vessel.home_port_name,
+              country: vessel.home_port_country,
+              code: vessel.home_port_code
+            }
+          : null,
+        createdAt: vessel.created_at,
+        updatedAt: vessel.updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error("Create vessel API error:", error);
+
+    if(error && error.code === "ER_DUP_ENTRY"){
+      return res.status(409).json({
+        success: false,
+        error: "Vessel code or IMO number already exists"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to create vessel"
+    });
+  }
+});
+
+/*
+ * PUT /api/vessels/:id
+ *
+ * Updates one vessel by database ID.
+ */
+router.put("/:id", async (req, res) => {
+  try {
+    const vesselId = Number(req.params.id);
+
+    if(!Number.isInteger(vesselId) || vesselId <= 0){
+      return res.status(400).json({
+        success: false,
+        error: "Invalid vessel ID"
+      });
+    }
+
+    const {
+      vesselCode,
+      name,
+      vesselType,
+      flagCountry,
+      imoNumber,
+      callSign,
+      capacityTons,
+      status,
+      homePortId,
+      commissionedDate
+    } = req.body || {};
+
+    const normalizedCode = String(vesselCode || "").trim();
+    const normalizedName = String(name || "").trim();
+    const normalizedType = String(vesselType || "").trim();
+    const normalizedFlagCountry = flagCountry == null
+      ? null
+      : String(flagCountry).trim() || null;
+    const normalizedImoNumber = imoNumber == null
+      ? null
+      : String(imoNumber).trim() || null;
+    const normalizedCallSign = callSign == null
+      ? null
+      : String(callSign).trim() || null;
+    const normalizedStatus = String(status || "").trim();
+    const normalizedHomePortId =
+      homePortId == null || homePortId === ""
+        ? null
+        : Number(homePortId);
+    const normalizedCommissionedDate =
+      commissionedDate == null || commissionedDate === ""
+        ? null
+        : String(commissionedDate).trim();
+
+    if(!normalizedCode || !normalizedName || !normalizedType){
+      return res.status(400).json({
+        success: false,
+        error: "vesselCode, name and vesselType are required"
+      });
+    }
+
+    const allowedStatuses = [
+      "active",
+      "restricted",
+      "maintenance",
+      "out_of_service",
+      "retired"
+    ];
+
+    if(!allowedStatuses.includes(normalizedStatus)){
+      return res.status(400).json({
+        success: false,
+        error: "Invalid vessel status"
+      });
+    }
+
+    const normalizedCapacity = Number(capacityTons);
+
+    if(!Number.isFinite(normalizedCapacity) || normalizedCapacity < 0){
+      return res.status(400).json({
+        success: false,
+        error: "capacityTons must be a non-negative number"
+      });
+    }
+
+    if(normalizedHomePortId !== null &&
+       (!Number.isInteger(normalizedHomePortId) || normalizedHomePortId <= 0)){
+      return res.status(400).json({
+        success: false,
+        error: "homePortId must be a positive integer"
+      });
+    }
+
+    if(normalizedHomePortId !== null){
+      const [portRows] = await pool.query(`
+        SELECT id
+        FROM ports
+        WHERE id = ?
+        LIMIT 1
+      `, [normalizedHomePortId]);
+
+      if(portRows.length === 0){
+        return res.status(400).json({
+          success: false,
+          error: "Home port not found"
+        });
+      }
+    }
+
+    if(normalizedCommissionedDate &&
+       !/^\d{4}-\d{2}-\d{2}$/.test(normalizedCommissionedDate)){
+      return res.status(400).json({
+        success: false,
+        error: "commissionedDate must use YYYY-MM-DD format"
+      });
+    }
+
+    const [existingRows] = await pool.query(`
+      SELECT id
+      FROM vessels
+      WHERE id = ?
+      LIMIT 1
+    `, [vesselId]);
+
+    if(existingRows.length === 0){
+      return res.status(404).json({
+        success: false,
+        error: "Vessel not found"
+      });
+    }
+
+    await pool.query(`
+      UPDATE vessels
+      SET
+        vessel_code = ?,
+        name = ?,
+        vessel_type = ?,
+        flag_country = ?,
+        imo_number = ?,
+        call_sign = ?,
+        capacity_tons = ?,
+        status = ?,
+        home_port_id = ?,
+        commissioned_date = ?
+      WHERE id = ?
+    `, [
+      normalizedCode,
+      normalizedName,
+      normalizedType,
+      normalizedFlagCountry,
+      normalizedImoNumber,
+      normalizedCallSign,
+      normalizedCapacity,
+      normalizedStatus,
+      normalizedHomePortId,
+      normalizedCommissionedDate,
+      vesselId
+    ]);
+
+    const [rows] = await pool.query(`
+      SELECT
+        v.id,
+        v.vessel_code,
+        v.name,
+        v.vessel_type,
+        v.flag_country,
+        v.imo_number,
+        v.call_sign,
+        v.capacity_tons,
+        v.status,
+        DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
+        v.created_at,
+        v.updated_at,
+        p.id AS home_port_id,
+        p.name AS home_port_name,
+        p.country AS home_port_country,
+        p.code AS home_port_code
+      FROM vessels v
+      LEFT JOIN ports p
+        ON p.id = v.home_port_id
+      WHERE v.id = ?
+      LIMIT 1
+    `, [vesselId]);
+
+    const vessel = rows[0];
+
+    res.json({
+      success: true,
+      message: "Vessel updated successfully",
+      data: {
+        id: Number(vessel.id),
+        vesselCode: vessel.vessel_code,
+        name: vessel.name,
+        vesselType: vessel.vessel_type,
+        flagCountry: vessel.flag_country,
+        imoNumber: vessel.imo_number,
+        callSign: vessel.call_sign,
+        capacityTons: Number(vessel.capacity_tons),
+        status: vessel.status,
+        commissionedDate: vessel.commissioned_date
+          ? String(vessel.commissioned_date).slice(0, 10)
+          : null,
+        homePort: vessel.home_port_id
+          ? {
+              id: Number(vessel.home_port_id),
+              name: vessel.home_port_name,
+              country: vessel.home_port_country,
+              code: vessel.home_port_code
+            }
+          : null,
+        createdAt: vessel.created_at,
+        updatedAt: vessel.updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error("Update vessel API error:", error);
+
+    if(error && error.code === "ER_DUP_ENTRY"){
+      return res.status(409).json({
+        success: false,
+        error: "Vessel code or IMO number already exists"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to update vessel"
     });
   }
 });
@@ -173,7 +600,7 @@ router.get("/:id", async (req, res) => {
         v.call_sign,
         v.capacity_tons,
         v.status,
-        v.commissioned_date,
+        DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
         v.created_at,
         v.updated_at,
         p.id AS home_port_id,
@@ -209,7 +636,9 @@ router.get("/:id", async (req, res) => {
         callSign: vessel.call_sign,
         capacityTons: Number(vessel.capacity_tons),
         status: vessel.status,
-        commissionedDate: vessel.commissioned_date,
+        commissionedDate: vessel.commissioned_date
+        ? String(vessel.commissioned_date).slice(0, 10)
+        : null,
         homePort: vessel.home_port_id
           ? {
               id: Number(vessel.home_port_id),
