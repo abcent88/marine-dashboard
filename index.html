@@ -556,6 +556,70 @@
   </div>
 </section>
 
+<!-- Alerts & Notifications -->
+<section class="card glass wide alerts-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Alerts &amp; Notifications</div>
+      <div class="muted small">Live operational alerts, severity and vessel status</div>
+    </div>
+    <div class="badge" id="alertsLiveBadge">Live</div>
+  </div>
+
+  <div class="alerts-summary">
+    <div class="alerts-summary-item">
+      <span class="muted small">Total Alerts</span>
+      <strong id="alertsTotal">0</strong>
+    </div>
+
+    <div class="alerts-summary-item">
+      <span class="muted small">Open</span>
+      <strong id="alertsOpen">0</strong>
+    </div>
+
+    <div class="alerts-summary-item">
+      <span class="muted small">Acknowledged</span>
+      <strong id="alertsAcknowledged">0</strong>
+    </div>
+
+    <div class="alerts-summary-item">
+      <span class="muted small">Critical</span>
+      <strong id="alertsCritical">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="alerts-severity-grid" id="alertsSeverityGrid">
+    <div class="muted">Loading alert severity...</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="alerts-table-wrap">
+    <table class="alerts-table">
+      <thead>
+        <tr>
+          <th>Alert</th>
+          <th>Vessel</th>
+          <th>Type</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+
+      <tbody id="alertsBody">
+        <tr>
+          <td colspan="6" class="muted">
+            Loading alerts...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 </main>
 
       <footer class="foot muted small">
