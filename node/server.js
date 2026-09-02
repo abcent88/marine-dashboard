@@ -6,6 +6,7 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 const dashboardRoutes = require("./routes/dashboard");
 const vesselRoutes = require("./routes/vessels");
+const voyageRoutes = require("./routes/voyages");
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +29,7 @@ app.use(express.static(require("path").resolve(__dirname, "..")));
 
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/vessels", vesselRoutes);
+app.use("/api/voyages", voyageRoutes);
 
 app.get("/health", (req, res) => {
   res.json({

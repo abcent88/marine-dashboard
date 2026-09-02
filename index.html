@@ -360,7 +360,71 @@
         </div>
       </section>
 
-      </main>
+      
+<!-- Fleet Voyages -->
+<section class="card glass wide fleet-voyages">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Fleet Voyages</div>
+      <div class="muted small">Live voyage schedules and vessel movements</div>
+    </div>
+    <div class="badge" id="voyagesLiveBadge">Live</div>
+  </div>
+
+  <div class="voyages-summary">
+    <div class="voyages-summary-item">
+      <span class="muted small">Total Voyages</span>
+      <strong id="voyagesTotal">0</strong>
+    </div>
+
+    <div class="voyages-summary-item">
+      <span class="muted small">In Progress</span>
+      <strong id="voyagesInProgress">0</strong>
+    </div>
+
+    <div class="voyages-summary-item">
+      <span class="muted small">Planned</span>
+      <strong id="voyagesPlanned">0</strong>
+    </div>
+
+    <div class="voyages-summary-item">
+      <span class="muted small">Completed</span>
+      <strong id="voyagesCompleted">0</strong>
+    </div>
+
+    <div class="voyages-summary-item">
+      <span class="muted small">Cancelled</span>
+      <strong id="voyagesCancelled">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="voyages-table-wrap">
+    <table class="voyages-table">
+      <thead>
+        <tr>
+          <th>Voyage</th>
+          <th>Vessel</th>
+          <th>Route</th>
+          <th>Status</th>
+          <th>Departure</th>
+          <th>Expected Arrival</th>
+        </tr>
+      </thead>
+
+      <tbody id="voyagesBody">
+        <tr>
+          <td colspan="6" class="muted">
+            Loading voyage data...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
 
       <footer class="foot muted small">
         Marine Fleet Operations • Live database data • API connected
