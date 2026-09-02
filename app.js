@@ -145,6 +145,33 @@ async function loadVesselDetails(vesselId){
 
     const vessel = result.data;
 
+    let position = null;
+
+    try {
+      const positionResponse = await fetch(
+        `${API_BASE}/api/vessels/${encodeURIComponent(vesselId)}/position`,
+        {
+          method: "GET",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      if(positionResponse.ok){
+        const positionResult = await positionResponse.json();
+
+        if(positionResult.success && positionResult.data){
+          position = positionResult.data;
+        }
+      }
+    } catch(positionError) {
+      console.warn(
+        "Unable to load vessel position:",
+        positionError
+      );
+    }
+
     const vesselName =
       escapeHtml(vessel.name || "Unnamed Vessel");
 
@@ -204,6 +231,40 @@ async function loadVesselDetails(vesselId){
             }
           )
         : "—";
+
+    const latitude =
+      position
+        ? Number(position.latitude).toFixed(4)
+        : "—";
+
+    const longitude =
+      position
+        ? Number(position.longitude).toFixed(4)
+        : "—";
+
+    const speedKnots =
+      position
+        ? `${Number(position.speedKnots).toFixed(1)} kn`
+        : "—";
+
+    const headingDegrees =
+      position
+        ? `${Number(position.headingDegrees).toFixed(0)}°`
+        : "—";
+
+    const positionRecordedAt =
+      position && position.recordedAt
+        ? new Date(position.recordedAt).toLocaleString(
+            undefined,
+            {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit"
+            }
+          )
+        : "Position unavailable";
 
     if(detailsSubtitle){
       detailsSubtitle.textContent =
@@ -280,6 +341,53 @@ async function loadVesselDetails(vesselId){
           <div class="vessel-detail-item">
             <span class="muted small">Commissioned</span>
             <strong>${escapeHtml(commissionedDate)}</strong>
+          </div>
+
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="vessel-position-section">
+
+          <div class="card-title">
+            Current Position
+          </div>
+
+          <div class="muted small vessel-position-status">
+            ${
+              position
+                ? "Latest recorded GPS position"
+                : "No GPS position recorded for this vessel"
+            }
+          </div>
+
+          <div class="vessel-details-grid vessel-position-grid">
+
+            <div class="vessel-detail-item">
+              <span class="muted small">Latitude</span>
+              <strong>${escapeHtml(latitude)}</strong>
+            </div>
+
+            <div class="vessel-detail-item">
+              <span class="muted small">Longitude</span>
+              <strong>${escapeHtml(longitude)}</strong>
+            </div>
+
+            <div class="vessel-detail-item">
+              <span class="muted small">Speed</span>
+              <strong>${escapeHtml(speedKnots)}</strong>
+            </div>
+
+            <div class="vessel-detail-item">
+              <span class="muted small">Heading</span>
+              <strong>${escapeHtml(headingDegrees)}</strong>
+            </div>
+
+            <div class="vessel-detail-item">
+              <span class="muted small">Last Position Update</span>
+              <strong>${escapeHtml(positionRecordedAt)}</strong>
+            </div>
+
           </div>
 
         </div>

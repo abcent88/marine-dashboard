@@ -76,6 +76,77 @@ router.get("/", async (req, res) => {
 });
 
 /*
+ * GET /api/vessels/:id/position
+ *
+ * Returns the latest known position for one vessel.
+ */
+router.get("/:id/position", async (req, res) => {
+  try {
+    const vesselId = Number(req.params.id);
+
+    if(!Number.isInteger(vesselId) || vesselId <= 0){
+      return res.status(400).json({
+        success: false,
+        error: "Invalid vessel ID"
+      });
+    }
+
+    const [rows] = await pool.query(`
+      SELECT
+        vp.id,
+        vp.vessel_id,
+        vp.latitude,
+        vp.longitude,
+        vp.speed_knots,
+        vp.heading_degrees,
+        vp.recorded_at,
+        v.vessel_code,
+        v.name AS vessel_name
+      FROM vessel_positions vp
+      INNER JOIN vessels v
+        ON v.id = vp.vessel_id
+      WHERE vp.vessel_id = ?
+        AND v.status <> 'retired'
+      ORDER BY vp.recorded_at DESC, vp.id DESC
+      LIMIT 1
+    `, [vesselId]);
+
+    if(rows.length === 0){
+      return res.status(404).json({
+        success: false,
+        error: "No position data found for vessel"
+      });
+    }
+
+    const position = rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        id: Number(position.id),
+        vesselId: Number(position.vessel_id),
+        vesselCode: position.vessel_code,
+        vesselName: position.vessel_name,
+        latitude: Number(position.latitude),
+        longitude: Number(position.longitude),
+        speedKnots: Number(position.speed_knots),
+        headingDegrees: Number(position.heading_degrees),
+        recordedAt: position.recorded_at
+      },
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error("Vessel position API error:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load vessel position"
+    });
+  }
+});
+
+/*
  * GET /api/vessels/:id
  *
  * Returns one vessel by database ID.
