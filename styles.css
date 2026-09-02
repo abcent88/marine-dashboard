@@ -694,3 +694,157 @@ select{
   }
 }
 
+/* =========================================================
+   Fuel Operations
+   ========================================================= */
+
+.fuel-operations{
+  min-width: 0;
+}
+
+.fuel-summary{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fuel-summary-item{
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.fuel-summary-item .muted{
+  display: block;
+  margin-bottom: 5px;
+}
+
+.fuel-summary-item strong{
+  display: block;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.fuel-vessel-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fuel-vessel-card{
+  min-width: 0;
+  padding: 13px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.fuel-vessel-card-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fuel-vessel-name{
+  font-weight: 700;
+}
+
+.fuel-vessel-code{
+  font-size: 11px;
+  opacity: .75;
+}
+
+.fuel-vessel-total{
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fuel-vessel-records{
+  margin-top: 9px;
+}
+
+.fuel-table-wrap{
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fuel-table{
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.fuel-table th{
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  white-space: nowrap;
+}
+
+.fuel-table td{
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  vertical-align: middle;
+}
+
+.fuel-table tbody tr:last-child td{
+  border-bottom: 0;
+}
+
+.fuel-table tbody tr{
+  transition: background .18s ease;
+}
+
+.fuel-table tbody tr:hover{
+  background: rgba(255,255,255,.035);
+}
+
+@media (max-width: 1200px){
+  .fuel-vessel-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px){
+  .fuel-summary{
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fuel-summary-item:last-child{
+    grid-column: span 2;
+  }
+
+  .fuel-vessel-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .fuel-summary-item strong{
+    font-size: 18px;
+  }
+
+  .fuel-table{
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 480px){
+  .fuel-summary{
+    grid-template-columns: 1fr;
+  }
+
+  .fuel-summary-item:last-child{
+    grid-column: span 1;
+  }
+}
+

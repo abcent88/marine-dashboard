@@ -360,7 +360,7 @@
         </div>
       </section>
 
-      
+
 <!-- Fleet Voyages -->
 <section class="card glass wide fleet-voyages">
   <div class="card-head">
@@ -417,6 +417,67 @@
         <tr>
           <td colspan="6" class="muted">
             Loading voyage data...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- Fuel Operations -->
+<section class="card glass wide fuel-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Fuel Operations</div>
+      <div class="muted small">Live fleet fuel consumption and vessel usage</div>
+    </div>
+    <div class="badge" id="fuelLiveBadge">Live</div>
+  </div>
+
+  <div class="fuel-summary">
+    <div class="fuel-summary-item">
+      <span class="muted small">Total Fuel Consumed</span>
+      <strong id="fuelTotalLiters">0 L</strong>
+    </div>
+
+    <div class="fuel-summary-item">
+      <span class="muted small">Fuel Records</span>
+      <strong id="fuelRecordCount">0</strong>
+    </div>
+
+    <div class="fuel-summary-item">
+      <span class="muted small">Vessels Reporting</span>
+      <strong id="fuelVesselsReporting">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fuel-vessel-grid" id="fuelVesselGrid">
+    <div class="muted">
+      Loading fuel data...
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fuel-table-wrap">
+    <table class="fuel-table">
+      <thead>
+        <tr>
+          <th>Vessel</th>
+          <th>Fuel Type</th>
+          <th>Quantity</th>
+          <th>Recorded</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+
+      <tbody id="fuelBody">
+        <tr>
+          <td colspan="5" class="muted">
+            Loading fuel records...
           </td>
         </tr>
       </tbody>
