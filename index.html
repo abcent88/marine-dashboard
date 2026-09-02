@@ -620,6 +620,65 @@
   </div>
 </section>
 
+
+<!-- Crew Management -->
+<section class="card glass wide crew-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Crew Management</div>
+      <div class="muted small">Live crew assignments, positions and certification status</div>
+    </div>
+    <div class="badge" id="crewLiveBadge">Live</div>
+  </div>
+
+  <div class="crew-summary">
+    <div class="crew-summary-item">
+      <span class="muted small">Total Crew</span>
+      <strong id="crewTotal">0</strong>
+    </div>
+
+    <div class="crew-summary-item">
+      <span class="muted small">Active</span>
+      <strong id="crewActive">0</strong>
+    </div>
+
+    <div class="crew-summary-item">
+      <span class="muted small">On Leave</span>
+      <strong id="crewOnLeave">0</strong>
+    </div>
+
+    <div class="crew-summary-item">
+      <span class="muted small">Assigned Vessels</span>
+      <strong id="crewAssignedVessels">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="crew-table-wrap">
+    <table class="crew-table">
+      <thead>
+        <tr>
+          <th>Crew Member</th>
+          <th>Position</th>
+          <th>Vessel</th>
+          <th>Certification</th>
+          <th>Status</th>
+          <th>Joined</th>
+        </tr>
+      </thead>
+
+      <tbody id="crewBody">
+        <tr>
+          <td colspan="6" class="muted">
+            Loading crew...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 </main>
 
       <footer class="foot muted small">

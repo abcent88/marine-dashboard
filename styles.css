@@ -825,6 +825,102 @@ select{
    Alerts & Notifications
    ========================================================= */
 
+
+/* =========================================================
+   Crew Management
+   ========================================================= */
+
+.crew-operations{
+  margin-top: 24px;
+}
+
+.crew-summary{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.crew-summary-item{
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.crew-summary-item strong{
+  display: block;
+  margin-top: 6px;
+  font-size: 1.35rem;
+}
+
+.crew-table-wrap{
+  width: 100%;
+  overflow-x: auto;
+}
+
+.crew-table{
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+}
+
+.crew-table th,
+.crew-table td{
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.crew-table th{
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.crew-status-badge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.crew-status-badge.active{
+  background: rgba(25, 135, 84, 0.14);
+}
+
+.crew-status-badge.on_leave{
+  background: rgba(255, 193, 7, 0.16);
+}
+
+.crew-status-badge.inactive{
+  background: rgba(108, 117, 125, 0.14);
+}
+
+@media (max-width: 720px){
+  .crew-summary{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px){
+  .crew-summary{
+    grid-template-columns: 1fr;
+  }
+
+  .crew-summary-item{
+    padding: 14px;
+  }
+
+  .crew-table{
+    min-width: 760px;
+  }
+}
+
 .alerts-operations{
   margin-top: 24px;
 }
