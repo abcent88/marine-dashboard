@@ -679,6 +679,94 @@
   </div>
 </section>
 
+
+<!-- Catch / Production Management -->
+<section class="card glass wide catch-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Catch &amp; Production</div>
+      <div class="muted small">Live catch records, production target and vessel performance</div>
+    </div>
+    <div class="badge" id="catchLiveBadge">Live</div>
+  </div>
+
+  <div class="catch-summary">
+    <div class="catch-summary-item">
+      <span class="muted small">Total Catch</span>
+      <strong id="catchTotalKg">0 kg</strong>
+    </div>
+
+    <div class="catch-summary-item">
+      <span class="muted small">Production Target</span>
+      <strong id="catchTargetKg">0 kg</strong>
+    </div>
+
+    <div class="catch-summary-item">
+      <span class="muted small">Target Progress</span>
+      <strong id="catchProgressPercent">0%</strong>
+    </div>
+
+    <div class="catch-summary-item">
+      <span class="muted small">Catch Records</span>
+      <strong id="catchRecordCount">0</strong>
+    </div>
+
+    <div class="catch-summary-item">
+      <span class="muted small">Species</span>
+      <strong id="catchSpeciesCount">0</strong>
+    </div>
+
+    <div class="catch-summary-item">
+      <span class="muted small">Vessels Reporting</span>
+      <strong id="catchVesselsReporting">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="catch-breakdown-grid">
+    <div>
+      <div class="section-subtitle">Catch by Species</div>
+      <div id="catchSpeciesGrid" class="catch-stat-grid">
+        <div class="muted small">Loading species data...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-subtitle">Catch by Vessel</div>
+      <div id="catchVesselGrid" class="catch-stat-grid">
+        <div class="muted small">Loading vessel data...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="catch-table-wrap">
+    <table class="catch-table">
+      <thead>
+        <tr>
+          <th>Vessel</th>
+          <th>Voyage</th>
+          <th>Species</th>
+          <th>Quantity</th>
+          <th>Recorded</th>
+          <th>Location</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+
+      <tbody id="catchBody">
+        <tr>
+          <td colspan="7" class="muted">
+            Loading catch records...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 </main>
 
       <footer class="foot muted small">

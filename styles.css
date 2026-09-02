@@ -827,6 +827,122 @@ select{
 
 
 /* =========================================================
+   Catch / Production Management
+   ========================================================= */
+
+.catch-operations{
+  margin-top: 24px;
+}
+
+.catch-summary{
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.catch-summary-item{
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.catch-summary-item strong{
+  display: block;
+  margin-top: 6px;
+  font-size: 1.35rem;
+}
+
+.catch-breakdown-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.catch-stat-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.catch-stat-card{
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.catch-stat-name{
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.catch-stat-card strong{
+  display: block;
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+}
+
+.catch-table-wrap{
+  width: 100%;
+  overflow-x: auto;
+}
+
+.catch-table{
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+}
+
+.catch-table th,
+.catch-table td{
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.catch-table th{
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 1100px){
+  .catch-summary{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px){
+  .catch-summary{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catch-breakdown-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px){
+  .catch-summary{
+    grid-template-columns: 1fr;
+  }
+
+  .catch-summary-item{
+    padding: 14px;
+  }
+
+  .catch-stat-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .catch-table{
+    min-width: 1000px;
+  }
+}
+
+/* =========================================================
    Crew Management
    ========================================================= */
 
