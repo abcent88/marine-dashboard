@@ -924,6 +924,438 @@
   </div>
 </section>
 
+
+
+<!-- Add User Modal -->
+<div
+  class="user-modal-overlay"
+  id="addUserModal"
+  aria-hidden="true"
+>
+  <div
+    class="user-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="addUserModalTitle"
+  >
+    <div class="user-modal-header">
+      <div>
+        <div class="user-modal-eyebrow">USER MANAGEMENT</div>
+        <h2 id="addUserModalTitle">Add User</h2>
+        <p>Create a new authorized Marine Dashboard account.</p>
+      </div>
+
+      <button
+        type="button"
+        class="user-modal-close"
+        id="closeAddUserModal"
+        aria-label="Close Add User form"
+      >
+        &times;
+      </button>
+    </div>
+
+    <form id="addUserForm" novalidate>
+      <div class="user-form-message" id="addUserMessage" role="alert"></div>
+
+      <div class="user-form-grid">
+
+        <div class="user-form-field user-form-field-full">
+          <label for="addUserFullName">Full Name</label>
+          <input
+            type="text"
+            id="addUserFullName"
+            name="fullName"
+            maxlength="150"
+            autocomplete="name"
+            placeholder="Enter full name"
+            required
+          >
+        </div>
+
+        <div class="user-form-field user-form-field-full">
+          <label for="addUserEmail">Email Address</label>
+          <input
+            type="email"
+            id="addUserEmail"
+            name="email"
+            maxlength="255"
+            autocomplete="email"
+            placeholder="user@example.com"
+            required
+          >
+        </div>
+
+        <div class="user-form-field">
+          <label for="addUserPassword">Password</label>
+          <input
+            type="password"
+            id="addUserPassword"
+            name="password"
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Minimum 8 characters"
+            required
+          >
+        </div>
+
+        <div class="user-form-field">
+          <label for="addUserConfirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="addUserConfirmPassword"
+            name="confirmPassword"
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Re-enter password"
+            required
+          >
+        </div>
+
+        <div class="user-form-field user-form-field-full">
+          <label for="addUserRole">User Role</label>
+          <select
+            id="addUserRole"
+            name="role"
+            required
+          >
+            <option value="">Select a role</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="captain">Captain</option>
+            <option value="crew">Crew</option>
+            <option value="operator">Operator</option>
+            <option value="viewer">Viewer</option>
+          </select>
+
+          <small id="addUserRoleHelp">
+            Select the level of access this account should have.
+          </small>
+        </div>
+
+      </div>
+
+      <div class="user-form-security-note">
+        <strong>Security</strong>
+        <span>
+          The password will be securely hashed before it is stored.
+          New accounts are created as active.
+        </span>
+      </div>
+
+      <div class="user-modal-footer">
+        <button
+          type="button"
+          class="user-management-btn user-modal-cancel"
+          id="cancelAddUser"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="user-management-btn user-modal-submit"
+          id="submitAddUser"
+        >
+          Create User
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Edit User Modal -->
+<div
+  id="editUserModal"
+  class="user-modal-overlay"
+  aria-hidden="true"
+>
+  <div
+    class="user-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="editUserModalTitle"
+  >
+    <div class="user-modal-header">
+      <div>
+        <div class="user-modal-eyebrow">User & Access Management</div>
+        <h2 id="editUserModalTitle">Edit User</h2>
+        <p>Update this user's account details and access status.</p>
+      </div>
+
+      <button
+        type="button"
+        id="closeEditUserModal"
+        class="user-modal-close"
+        aria-label="Close Edit User"
+      >
+        &times;
+      </button>
+    </div>
+
+    <form id="editUserForm" novalidate>
+      <input
+        type="hidden"
+        id="editUserId"
+      />
+
+      <div class="user-form-grid">
+        <div class="user-form-field user-form-field-full">
+          <label for="editUserFullName">Full Name</label>
+          <input
+            type="text"
+            id="editUserFullName"
+            name="fullName"
+            maxlength="150"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div class="user-form-field">
+          <label for="editUserEmail">Email Address</label>
+          <input
+            type="email"
+            id="editUserEmail"
+            name="email"
+            maxlength="255"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="user-form-field">
+          <label for="editUserRole">Role</label>
+          <select
+            id="editUserRole"
+            name="role"
+            required
+          >
+            <option value="">Select role</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Administrator</option>
+            <option value="manager">Fleet Manager</option>
+            <option value="captain">Captain</option>
+            <option value="crew">Crew</option>
+            <option value="operator">Operations Officer</option>
+            <option value="viewer">Viewer</option>
+          </select>
+
+          <small id="editUserRoleHelp">
+            Role permissions are controlled by the user's access level.
+          </small>
+        </div>
+
+        <div class="user-form-field">
+          <label for="editUserStatus">Account Status</label>
+          <select
+            id="editUserStatus"
+            name="status"
+            required
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+
+        <div
+          id="editUserMessage"
+          class="user-form-message"
+          role="alert"
+          aria-live="polite"
+        ></div>
+      </div>
+
+      <div class="user-form-security-note">
+        <strong>Security:</strong>
+        Passwords are not displayed or changed from this form.
+        Any role or status change is recorded in the audit log.
+      </div>
+
+      <div class="user-password-reset">
+        <div class="user-password-reset-header">
+          <div>
+            <div class="user-modal-eyebrow">Account Security</div>
+            <h3>Reset Password</h3>
+            <p>Set a new password for this user. The existing password cannot be viewed.</p>
+          </div>
+        </div>
+
+        <div class="user-form-grid">
+          <div class="user-form-field">
+            <label for="resetUserPassword">New Password</label>
+            <input
+              type="password"
+              id="resetUserPassword"
+              name="resetUserPassword"
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Minimum 8 characters"
+            />
+          </div>
+
+          <div class="user-form-field">
+            <label for="resetUserPasswordConfirm">Confirm New Password</label>
+            <input
+              type="password"
+              id="resetUserPasswordConfirm"
+              name="resetUserPasswordConfirm"
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Enter the password again"
+            />
+          </div>
+        </div>
+
+        <div
+          id="resetUserPasswordMessage"
+          class="user-form-message"
+          role="alert"
+          aria-live="polite"
+        ></div>
+
+        <button
+          type="button"
+          id="resetUserPasswordBtn"
+          class="user-password-reset-btn"
+        >
+          Reset Password
+        </button>
+      </div>
+
+      <div class="user-danger-zone">
+        <div class="user-danger-zone-header">
+          <div>
+            <div class="user-modal-eyebrow">Danger Zone</div>
+            <h3>Delete User</h3>
+            <p>
+              This performs a soft delete. The user's record and historical
+              audit information are retained, but the account is marked as deleted.
+            </p>
+          </div>
+        </div>
+
+        <div
+          id="deleteUserMessage"
+          class="user-form-message"
+          role="alert"
+          aria-live="polite"
+        ></div>
+
+        <button
+          type="button"
+          id="deleteUserBtn"
+          class="user-danger-btn"
+        >
+          Delete User
+        </button>
+      </div>
+
+      <div class="user-modal-footer">
+        <button
+          type="button"
+          id="cancelEditUser"
+          class="user-modal-cancel"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          id="submitEditUser"
+          class="user-modal-submit"
+        >
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- User & Access Management -->
+<section class="card glass wide user-management-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">User &amp; Access Management</div>
+      <div class="muted small">
+        Manage dashboard users, roles and account status
+      </div>
+    </div>
+
+    <div class="badge" id="usersLiveBadge">Live</div>
+  </div>
+
+  <div class="user-management-toolbar">
+    <div>
+      <div class="user-management-title">System Users</div>
+      <div class="muted small">
+        Create and manage authorized Marine Dashboard accounts.
+      </div>
+    </div>
+
+    <div class="user-management-actions">
+      <button
+        type="button"
+        class="user-management-btn"
+        id="addUserBtn"
+      >
+        Add User
+      </button>
+    </div>
+  </div>
+
+  <div class="user-summary">
+    <div class="user-summary-item">
+      <span class="muted small">Total Users</span>
+      <strong id="usersTotal">0</strong>
+    </div>
+
+    <div class="user-summary-item">
+      <span class="muted small">Active</span>
+      <strong id="usersActive">0</strong>
+    </div>
+
+    <div class="user-summary-item">
+      <span class="muted small">Inactive</span>
+      <strong id="usersInactive">0</strong>
+    </div>
+
+    <div class="user-summary-item">
+      <span class="muted small">Suspended</span>
+      <strong id="usersSuspended">0</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="user-table-wrap">
+    <table class="user-management-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody id="usersBody">
+        <tr>
+          <td colspan="7" class="muted">
+            Loading users...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 </main>
 
       <footer class="foot muted small">

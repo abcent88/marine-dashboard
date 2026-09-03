@@ -1,5 +1,3 @@
-const DEMO = { email: "admin@marine.io", password: "admin123" };
-
 function setSession(user){
   localStorage.setItem("marine_session", JSON.stringify({
     user,
@@ -11,24 +9,70 @@ function goDashboard(){
   window.location.href = "./index.html";
 }
 
-document.getElementById("loginBtn").addEventListener("click", () => {
+async function login(){
   const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const password = document.getElementById("password").value;
   const err = document.getElementById("err");
+  const loginBtn = document.getElementById("loginBtn");
 
-  const ok = (email === DEMO.email && password === DEMO.password);
+  err.style.display = "none";
 
-  if(!ok){
+  if(!email || !password){
+    err.textContent = "Please enter your email and password.";
     err.style.display = "block";
     return;
   }
 
-  err.style.display = "none";
-  setSession({ email, role: "admin" });
-  goDashboard();
-});
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Signing in...";
 
-document.getElementById("demoBtn").addEventListener("click", () => {
-  setSession({ email: DEMO.email, role: "admin" });
-  goDashboard();
-});
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        password
+      })
+    });
+
+    const result = await response.json();
+
+    if(!response.ok || !result.success){
+      err.textContent =
+        result.message || "Unable to sign in.";
+      err.style.display = "block";
+      return;
+    }
+
+    setSession(result.data);
+    goDashboard();
+  } catch(error) {
+    console.error("Login error:", error);
+
+    err.textContent =
+      "Unable to connect to the authentication service.";
+    err.style.display = "block";
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Sign In";
+  }
+}
+
+document.getElementById("loginBtn").addEventListener(
+  "click",
+  login
+);
+
+document.getElementById("password").addEventListener(
+  "keydown",
+  event => {
+    if(event.key === "Enter"){
+      login();
+    }
+  }
+);

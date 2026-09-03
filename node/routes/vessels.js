@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db");
+const { requireRole } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ router.get("/", async (req, res) => {
  *
  * Creates a new vessel.
  */
-router.post("/", async (req, res) => {
+router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
   try {
     const {
       vesselCode,
@@ -278,7 +279,7 @@ router.post("/", async (req, res) => {
  *
  * Updates one vessel by database ID.
  */
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
   try {
     const vesselId = Number(req.params.id);
 
@@ -507,7 +508,7 @@ router.put("/:id", async (req, res) => {
  *
  * Retires one vessel without deleting its historical records.
  */
-router.patch("/:id/retire", async (req, res) => {
+router.patch("/:id/retire", requireRole("super_admin", "admin"), async (req, res) => {
   try {
     const vesselId = Number(req.params.id);
 
