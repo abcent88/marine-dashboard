@@ -307,6 +307,25 @@
           </div>
         </div>
 
+        <div class="fleet-management-toolbar">
+          <div>
+            <div class="fleet-management-title">Vessel Management</div>
+            <div class="muted small">
+              Add, update or retire vessels from the live fleet.
+            </div>
+          </div>
+
+          <div class="fleet-management-actions">
+            <button
+              type="button"
+              class="fleet-management-btn"
+              id="addVesselBtn"
+            >
+              Add Vessel
+            </button>
+          </div>
+        </div>
+
         <div class="divider"></div>
 
         <div class="fleet-table-wrap">
@@ -320,12 +339,13 @@
                 <th>Capacity</th>
                 <th>Status</th>
                 <th>Home Port</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
             <tbody id="fleetVesselsBody">
               <tr>
-                <td colspan="7" class="muted">Loading fleet data...</td>
+                <td colspan="8" class="muted">Loading fleet data...</td>
               </tr>
             </tbody>
           </table>
