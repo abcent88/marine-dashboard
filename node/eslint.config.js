@@ -17,7 +17,9 @@ module.exports = [
       }
     },
     rules: {
-      "no-unused-vars": "warn",
+        "no-unused-vars": ["warn", {
+          "varsIgnorePattern": "^loadVoyages$"
+        }],
       "no-undef": "error",
       "no-unreachable": "error"
     }
@@ -29,7 +31,11 @@ module.exports = [
       sourceType: "commonjs",
       globals: {
         ...globals.node,
-        ...globals.jest
+        ...globals.jest,
+        $: "readonly",
+        API_BASE: "readonly",
+        escapeHtml: "readonly",
+        loadVoyages: "readonly"
       }
     },
     rules: {
