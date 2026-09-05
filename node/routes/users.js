@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../db");
+const logger = require("../lib/logger");
 const { requireRole } = require("../middleware/auth");
 
 const router = express.Router();
@@ -126,7 +127,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Create user error:", error);
+    logger.error({ err: error }, "Create user error");
 
     return res.status(500).json({
       success: false,
@@ -351,7 +352,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Update user error:", error);
+    logger.error({ err: error }, "Update user error");
 
     return res.status(500).json({
       success: false,
@@ -472,7 +473,7 @@ router.put("/:id/password", requireRole("super_admin", "admin"), async (req, res
       }
     });
   } catch (error) {
-    console.error("Reset user password error:", error);
+    logger.error({ err: error }, "Reset user password error");
 
     return res.status(500).json({
       success: false,
@@ -587,7 +588,7 @@ router.delete("/:id", requireRole("super_admin", "admin"), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Delete user error:", error);
+    logger.error({ err: error }, "Delete user error");
 
     return res.status(500).json({
       success: false,
@@ -628,7 +629,7 @@ router.get("/", requireRole("super_admin", "admin"), async (req, res) => {
       data: users
     });
   } catch (error) {
-    console.error("Users API error:", error);
+    logger.error({ err: error }, "Users API error");
 
     return res.status(500).json({
       success: false,

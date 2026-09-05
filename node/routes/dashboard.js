@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db");
+const logger = require("../lib/logger");
 
 const router = express.Router();
 
@@ -62,7 +63,7 @@ router.get("/summary", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Dashboard summary error:", error);
+    logger.error({ err: error }, "Dashboard summary error");
 
     res.status(500).json({
       success: false,

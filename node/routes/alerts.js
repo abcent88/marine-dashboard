@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db");
+const logger = require("../lib/logger");
 
 const router = express.Router();
 
@@ -92,7 +93,7 @@ router.get("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Alerts API error:", error);
+    logger.error({ err: error }, "Alerts API error");
 
     res.status(500).json({
       success: false,

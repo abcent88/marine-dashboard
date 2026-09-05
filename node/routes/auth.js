@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../db");
+const logger = require("../lib/logger");
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ router.post("/login", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Authentication error:", error);
+    logger.error({ err: error }, "Authentication error");
 
     return res.status(500).json({
       success: false,
@@ -96,7 +97,7 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (req, res) => {
   req.session.destroy((error) => {
     if(error){
-      console.error("Logout error:", error);
+      logger.error({ err: error }, "Logout error");
 
       return res.status(500).json({
         success: false,

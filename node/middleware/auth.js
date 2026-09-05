@@ -1,4 +1,5 @@
 const pool = require("../db");
+const logger = require("../lib/logger");
 
 async function validateSessionUser(req, res) {
   if (!req.session || !req.session.user) {
@@ -78,7 +79,7 @@ async function validateSessionUser(req, res) {
 
     return true;
   } catch (error) {
-    console.error("Session validation error:", error);
+    logger.error({ err: error }, "Session validation error");
 
     res.status(500).json({
       success: false,

@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 const { requireRole } = require("../middleware/auth");
+const logger = require("../lib/logger");
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.get("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Vessels API error:", error);
+    logger.error({ err: error }, "Vessels API error");
 
     res.status(500).json({
       success: false,
@@ -258,7 +259,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Create vessel API error:", error);
+    logger.error({ err: error }, "Create vessel API error");
 
     if(error && error.code === "ER_DUP_ENTRY"){
       return res.status(409).json({
@@ -487,7 +488,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Update vessel API error:", error);
+    logger.error({ err: error }, "Update vessel API error");
 
     if(error && error.code === "ER_DUP_ENTRY"){
       return res.status(409).json({
@@ -609,7 +610,7 @@ router.patch("/:id/retire", requireRole("super_admin", "admin"), async (req, res
     });
 
   } catch (error) {
-    console.error("Retire vessel API error:", error);
+    logger.error({ err: error }, "Retire vessel API error");
 
     res.status(500).json({
       success: false,
@@ -680,7 +681,7 @@ router.get("/:id/position", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Vessel position API error:", error);
+    logger.error({ err: error }, "Vessel position API error");
 
     res.status(500).json({
       success: false,
@@ -769,7 +770,7 @@ router.get("/:id", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Vessel detail API error:", error);
+    logger.error({ err: error }, "Vessel detail API error");
 
     res.status(500).json({
       success: false,

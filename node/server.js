@@ -17,6 +17,7 @@ const reportsRoutes = require("./routes/reports");
 const authRoutes = require("./routes/auth");
 const usersRoutes = require("./routes/users");
 const { requireAuth } = require("./middleware/auth");
+const logger = require("./lib/logger");
 
 const app = express();
 const server = http.createServer(app);
@@ -77,6 +78,41 @@ app.get("/health", (req, res) => {
   });
 });
 
+/*
+ * Return a consistent JSON response for unknown API routes.
+ */
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "API route not found"
+  });
+});
+
+/*
+ * Centralized Express error handler.
+ * Route-level handlers can continue to manage expected errors,
+ * while unexpected errors are logged consistently here.
+ */
+app.use((error, req, res, next) => {
+  logger.error(
+    {
+      err: error,
+      method: req.method,
+      path: req.originalUrl
+    },
+    "Unhandled Express error"
+  );
+
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  res.status(error.status || 500).json({
+    success: false,
+    message: "Internal server error"
+  });
+});
+
 const io = new Server(server, {
   cors: {
     origin: true,
@@ -85,7 +121,7 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
+  logger.info({ socketId: socket.id }, "Socket connected");
 
   socket.emit("marine:connected", {
     message: "Connected to Marine Dashboard real-time service",
@@ -93,10 +129,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`Socket disconnected: ${socket.id}`);
+    logger.info({ socketId: socket.id }, "Socket disconnected");
   });
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Marine Dashboard Node service running on http://127.0.0.1:${PORT}`);
+  logger.info({ host: HOST, port: PORT }, "Marine Dashboard Node service running");
 });
