@@ -9,3 +9,6 @@ uploads/*
 .DS_Store
 
 node/node_modules/
+
+# Test coverage
+node/coverage/
