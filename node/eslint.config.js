@@ -41,6 +41,7 @@ module.exports = [
         loadCrew: "readonly",
         loadCatch: "readonly",
         loadAlerts: "readonly",
+        loadReports: "readonly",
         LIVE: "readonly",
         nowTime: "readonly",
         formatVoyageDate: "readonly",
@@ -52,7 +53,7 @@ module.exports = [
     },
     rules: {
       "no-unused-vars": ["warn", {
-        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel)$"
+        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports)$"
       }],
       "no-undef": "error",
       "no-unreachable": "error"
