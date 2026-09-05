@@ -22,6 +22,7 @@ const app = express();
 const server = http.createServer(app);
 
 const PORT = Number(process.env.NODE_PORT || 3001);
+const HOST = process.env.NODE_HOST || "127.0.0.1";
 
 app.use(cors({
   origin: true,
@@ -96,6 +97,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, "127.0.0.1", () => {
+server.listen(PORT, HOST, () => {
   console.log(`Marine Dashboard Node service running on http://127.0.0.1:${PORT}`);
 });
