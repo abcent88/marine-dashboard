@@ -46,7 +46,7 @@ INSERT INTO users
     (id, full_name, email, password_hash, role, status)
 VALUES
     (1, 'Marine Super Administrator', 'admin@marine.io',
-     '$2b$10$demo.marine.dashboard.admin.password.placeholder',
+     '$2b$10$O6JLzhEztcYuCSzkgPdrr.7TD60K039wz3CYNi2/0ZjKBxkkxC2O6',
      'super_admin', 'active'),
 
     (2, 'Fleet Manager', 'manager@marine.io',
