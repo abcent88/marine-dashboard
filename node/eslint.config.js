@@ -52,7 +52,7 @@ module.exports = [
     },
     rules: {
       "no-unused-vars": ["warn", {
-        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance)$"
+        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel)$"
       }],
       "no-undef": "error",
       "no-unreachable": "error"
