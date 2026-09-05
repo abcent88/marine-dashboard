@@ -2,32 +2,6 @@ const $ = (id) => document.getElementById(id);
 
 const API_BASE = "http://127.0.0.1:3001";
 
-function clamp(n, min, max){
-  return Math.max(min, Math.min(max, n));
-}
-
-function nowTime(){
-  const d = new Date();
-  return d.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function moneyShort(n){
-  const abs = Math.abs(n);
-
-  if(abs >= 1e9) return `$${(n/1e9).toFixed(3)}B`;
-  if(abs >= 1e6) return `$${(n/1e6).toFixed(3)}M`;
-  if(abs >= 1e3) return `$${(n/1e3).toFixed(1)}K`;
-
-  return `$${n.toFixed(0)}`;
-}
-
-function pct(a, b){
-  return b === 0 ? 0 : Math.round((a / b) * 100);
-}
-
 let capacityChart;
 let sustainChart;
 
@@ -37,19 +11,6 @@ let sustainChart;
  * We start with the existing mock data so the dashboard
  * can still render if the API is temporarily unavailable.
  */
-/*
- * Safely escape database values before inserting them
- * into dynamically generated HTML.
- */
-function escapeHtml(value){
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 const LIVE = {
   summary: null,
   vessels: []
