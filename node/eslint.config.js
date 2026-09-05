@@ -35,6 +35,10 @@ module.exports = [
         $: "readonly",
         API_BASE: "readonly",
         escapeHtml: "readonly",
+      moneyShort: "readonly",
+      Chart: "readonly",
+      sustainChart: "writable",
+      applyLiveSummary: "readonly",
         loadVoyages: "readonly",
         loadVessels: "readonly",
         loadDashboardSummary: "readonly",
@@ -56,7 +60,7 @@ module.exports = [
     },
     rules: {
       "no-unused-vars": ["warn", {
-        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement)$"
+        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement|setHeader|makeDoughnut|setShips|setBothShips|setAI|setCapture|setCaptains|setRadar|wireCaptureTabs)$"
       }],
       "no-undef": "error",
       "no-unreachable": "error"
