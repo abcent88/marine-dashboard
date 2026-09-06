@@ -19,7 +19,8 @@ const REQUIRED_TABLES = [
   "alerts",
   "daily_metrics",
   "audit_logs",
-  "schema_migrations"
+  "schema_migrations",
+  "sessions"
 ];
 
 const REQUIRED_COLUMNS = {
@@ -75,14 +76,24 @@ const REQUIRED_COLUMNS = {
     "species",
     "quantity_kg",
     "recorded_at"
+  ],
+
+  sessions: [
+    "session_id",
+    "expires_at",
+    "data"
   ]
 };
 
-const EXPECTED_MIGRATIONS = [
-  "001_initial_schema",
-  "002_seed_demo_data",
-  "003_add_ais_tracking_support"
-];
+const MIGRATIONS_DIR = path.resolve(__dirname, "../../database");
+
+function getExpectedMigrations() {
+  return require("fs")
+    .readdirSync(MIGRATIONS_DIR)
+    .filter((file) => /^\d+_.+\.sql$/.test(file))
+    .map((file) => file.replace(/\.sql$/, ""))
+    .sort();
+}
 
 async function createConnection() {
   return mysql.createConnection({
@@ -155,21 +166,20 @@ async function verifyMigrations(db) {
   );
 
   const actual = rows.map((row) => row.version);
+  const expected = getExpectedMigrations();
 
   if (
-    actual.length !== EXPECTED_MIGRATIONS.length ||
-    actual.some(
-      (version, index) => version !== EXPECTED_MIGRATIONS[index]
-    )
+    actual.length !== expected.length ||
+    actual.some((version, index) => version !== expected[index])
   ) {
     throw new Error(
-      `Migration history mismatch. Expected: ${EXPECTED_MIGRATIONS.join(", ")}; ` +
+      `Migration history mismatch. Expected: ${expected.join(", ")}; ` +
       `found: ${actual.join(", ")}`
     );
   }
 
   console.log(
-    `PASS migrations: ${EXPECTED_MIGRATIONS.length} migrations recorded`
+    `PASS migrations: ${expected.length} migrations recorded`
   );
 }
 
