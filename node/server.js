@@ -29,6 +29,12 @@ app.use(requestId);
 const PORT = Number(process.env.NODE_PORT || 3001);
 const HOST = process.env.NODE_HOST || "127.0.0.1";
 
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (process.env.NODE_ENV === "production" && !sessionSecret) {
+  throw new Error("SESSION_SECRET is required in production");
+}
+
 app.use(cors({
   origin: true,
   credentials: true
@@ -37,13 +43,13 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "marine-dashboard-development-secret",
+  secret: sessionSecret || "marine-dashboard-development-secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 1000 * 60 * 60 * 8
   }
 }));
