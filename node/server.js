@@ -19,9 +19,12 @@ const usersRoutes = require("./routes/users");
 const aisRoutes = require("./routes/ais");
 const { requireAuth } = require("./middleware/auth");
 const logger = require("./lib/logger");
+const requestId = require("./middleware/requestId");
 
 const app = express();
 const server = http.createServer(app);
+
+app.use(requestId);
 
 const PORT = Number(process.env.NODE_PORT || 3001);
 const HOST = process.env.NODE_HOST || "127.0.0.1";
@@ -99,6 +102,7 @@ app.use((error, req, res, next) => {
   logger.error(
     {
       err: error,
+      requestId: req.requestId,
       method: req.method,
       path: req.originalUrl
     },
