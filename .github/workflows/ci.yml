@@ -8,12 +8,37 @@ on:
 
 jobs:
   node:
-    name: Node.js Tests and Lint
+    name: Node.js Tests, Lint, and Database Verification
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_password
+          MYSQL_DATABASE: marine_dashboard
+          MYSQL_USER: marine_app
+          MYSQL_PASSWORD: marine_ci_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     defaults:
       run:
         working-directory: node
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: marine_dashboard
+      DB_USER: marine_app
+      DB_PASS: marine_ci_password
+      NODE_PORT: 3001
+      SESSION_SECRET: ci-session-secret-not-for-production
 
     steps:
       - name: Checkout repository
@@ -28,6 +53,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Apply database migrations
+        run: npm run migrate
+
+      - name: Verify migration idempotency
+        run: npm run migrate
+
+      - name: Verify database schema and integrity
+        run: npm run verify-schema
 
       - name: Run ESLint
         run: npm run lint

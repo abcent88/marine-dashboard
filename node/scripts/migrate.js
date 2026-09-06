@@ -2,6 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const mysql = require("mysql2/promise");
+const dotenv = require("dotenv");
+
+dotenv.config({
+  path: path.resolve(__dirname, "../../.env")
+});
 
 const MIGRATIONS_DIR = path.join(__dirname, "../../database");
 
