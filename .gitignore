@@ -12,3 +12,7 @@ node/node_modules/
 
 # Test coverage
 node/coverage/
+
+# Local development backups
+backups/
+*.before-*

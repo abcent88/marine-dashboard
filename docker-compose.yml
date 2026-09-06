@@ -42,6 +42,7 @@ services:
       DB_NAME: marine_dashboard
       DB_USER: marine_app
       DB_PASS: marine_app_dev_password
+      AIS_INGEST_API_KEY: ${AIS_INGEST_API_KEY}
     ports:
       - "3001:3001"
 

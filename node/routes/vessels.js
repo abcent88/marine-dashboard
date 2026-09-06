@@ -643,8 +643,12 @@ router.get("/:id/position", async (req, res) => {
         vp.longitude,
         vp.speed_knots,
         vp.heading_degrees,
+        vp.position_source,
+        vp.source_device_id,
+        vp.source_timestamp,
         vp.recorded_at,
         v.vessel_code,
+        v.mmsi,
         v.name AS vessel_name
       FROM vessel_positions vp
       INNER JOIN vessels v
@@ -671,10 +675,14 @@ router.get("/:id/position", async (req, res) => {
         vesselId: Number(position.vessel_id),
         vesselCode: position.vessel_code,
         vesselName: position.vessel_name,
+        mmsi: position.mmsi,
         latitude: Number(position.latitude),
         longitude: Number(position.longitude),
         speedKnots: Number(position.speed_knots),
         headingDegrees: Number(position.heading_degrees),
+        positionSource: position.position_source,
+        sourceDeviceId: position.source_device_id,
+        sourceTimestamp: position.source_timestamp,
         recordedAt: position.recorded_at
       },
       generatedAt: new Date().toISOString()
