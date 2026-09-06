@@ -293,6 +293,96 @@ describe("Reports routes", () => {
     expect(pool.query).toHaveBeenCalledTimes(12);
   });
 
+  test("GET /api/reports/summary handles empty database results", async () => {
+    pool.query
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .get("/api/reports/summary");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    expect(response.body.data.fleet).toEqual({
+      total: 0,
+      active: 0,
+      restricted: 0,
+      maintenance: 0,
+      outOfService: 0,
+      totalCapacityTons: 0
+    });
+
+    expect(response.body.data.production).toEqual({
+      totalCatchKg: 0,
+      targetKg: 15000,
+      catchProgressPercent: 0,
+      recordCount: 0,
+      speciesCount: 0,
+      vesselsReporting: 0,
+      catchPerLiterKg: 0,
+      bySpecies: [],
+      byVessel: []
+    });
+
+    expect(response.body.data.fuel).toEqual({
+      totalLiters: 0,
+      recordCount: 0,
+      vesselsReporting: 0,
+      byVessel: []
+    });
+
+    expect(response.body.data.voyages).toEqual({
+      total: 0,
+      planned: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0
+    });
+
+    expect(response.body.data.maintenance).toEqual({
+      totalRecords: 0,
+      scheduled: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+      totalCost: 0,
+      byVessel: []
+    });
+
+    expect(response.body.data.alerts).toEqual({
+      total: 0,
+      open: 0,
+      acknowledged: 0,
+      resolved: 0,
+      critical: 0,
+      warning: 0,
+      info: 0
+    });
+
+    expect(response.body.data.crew).toEqual({
+      total: 0,
+      active: 0,
+      onLeave: 0,
+      inactive: 0,
+      assignedVessels: 0
+    });
+
+    expect(response.body.data.dailyMetrics).toEqual([]);
+    expect(response.body.generatedAt).toEqual(expect.any(String));
+    expect(pool.query).toHaveBeenCalledTimes(12);
+  });
+
   test("GET /api/reports/summary returns 500 when a database query fails", async () => {
     pool.query.mockRejectedValueOnce(new Error("Database unavailable"));
 
