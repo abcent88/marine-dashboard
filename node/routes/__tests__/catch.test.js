@@ -166,6 +166,79 @@ describe("Catch routes", () => {
     expect(pool.query).toHaveBeenCalledTimes(1);
   });
 
+  test("GET /api/catch applies fallback values for incomplete catch records", async () => {
+    pool.query.mockResolvedValueOnce([
+      [
+        {
+          id: "4",
+          vessel_id: "11",
+          voyage_id: null,
+          species: null,
+          quantity_kg: null,
+          recorded_at: "2026-09-05T10:00:00.000Z",
+          location_latitude: null,
+          location_longitude: null,
+          notes: null,
+          vessel_code: "",
+          vessel_name: "",
+          voyage_number: null,
+          voyage_status: null
+        }
+      ]
+    ]);
+
+    const response = await request(app)
+      .get("/api/catch");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    expect(response.body.data.summary).toEqual({
+      totalCatchKg: 0,
+      targetKg: 15000,
+      targetProgressPercent: 0,
+      recordCount: 1,
+      speciesCount: 1,
+      vesselsReporting: 1
+    });
+
+    expect(response.body.data.speciesBreakdown).toEqual([
+      {
+        species: "Unknown",
+        quantityKg: 0,
+        recordCount: 1
+      }
+    ]);
+
+    expect(response.body.data.vesselBreakdown).toEqual([
+      {
+        vesselId: 11,
+        vesselCode: null,
+        vesselName: "Unassigned",
+        quantityKg: 0,
+        recordCount: 1
+      }
+    ]);
+
+    expect(response.body.data.catches).toEqual([
+      {
+        id: 4,
+        vesselId: 11,
+        voyageId: null,
+        vesselCode: "",
+        vesselName: "",
+        voyageNumber: null,
+        voyageStatus: null,
+        species: null,
+        quantityKg: 0,
+        recordedAt: "2026-09-05T10:00:00.000Z",
+        latitude: null,
+        longitude: null,
+        notes: null
+      }
+    ]);
+  });
+
   test("GET /api/catch returns 500 when the database query fails", async () => {
     pool.query.mockRejectedValueOnce(new Error("Database unavailable"));
 
