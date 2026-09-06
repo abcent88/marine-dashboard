@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-const API_BASE = "http://127.0.0.1:3001";
+const API_BASE = "";
 
 let capacityChart;
 let sustainChart;

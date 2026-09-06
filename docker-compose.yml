@@ -10,8 +10,6 @@ services:
       MYSQL_ROOT_PASSWORD: marine_root_dev_password
     volumes:
       - marine_mysql_data:/var/lib/mysql
-      - ./database/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
-      - ./database/002_seed_demo_data.sql:/docker-entrypoint-initdb.d/002_seed_demo_data.sql:ro
     healthcheck:
       test:
         [
