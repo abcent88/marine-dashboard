@@ -20,6 +20,7 @@ const aisRoutes = require("./routes/ais");
 const { requireAuth } = require("./middleware/auth");
 const logger = require("./lib/logger");
 const requestId = require("./middleware/requestId");
+const MySQLSessionStore = require("./lib/mysqlSessionStore");
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +44,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
+  store: new MySQLSessionStore(),
   secret: sessionSecret || "marine-dashboard-development-secret",
   resave: false,
   saveUninitialized: false,

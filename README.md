@@ -322,6 +322,19 @@ A healthy API should return HTTP 200 and a JSON response indicating that the ser
 
 Protected API endpoints require an authenticated application session.
 
+### Persistent session storage
+
+Application login sessions are persisted in the MySQL `sessions` table through the custom `MySQLSessionStore`. This avoids Express's in-memory `MemoryStore` and allows sessions to survive application-container restarts.
+
+The session table is created by migration `004_add_sessions.sql`. Apply database migrations before starting the application:
+
+```bash
+cd node
+npm run migrate
+```
+
+In production, `SESSION_SECRET` must be set to a strong secret. Session cookies are configured with `httpOnly`, `sameSite=lax`, and `secure` when `NODE_ENV=production`.
+
 Do not document or commit working passwords.
 
 Example login flow:
