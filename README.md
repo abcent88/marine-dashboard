@@ -702,6 +702,21 @@ Do not send a production AIS write request merely to test connectivity. AIS POST
 
 ## 25. Automated Testing
 
+For a complete local quality gate, run:
+
+```bash
+cd ~/projects/marine-dashboard
+./scripts/verify-local.sh
+```
+
+This runs, in order:
+
+1. ESLint
+2. Jest tests with enforced coverage thresholds
+3. Database migrations
+4. Schema and database integrity verification
+
+
 Run:
 
 ```bash
