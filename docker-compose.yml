@@ -44,7 +44,7 @@ services:
       DB_PASS: marine_app_dev_password
       AIS_INGEST_API_KEY: ${AIS_INGEST_API_KEY}
     ports:
-      - "3001:3001"
+      - "${MARINE_DASHBOARD_PORT:-3001}:3001"
 
 volumes:
   marine_mysql_data:
