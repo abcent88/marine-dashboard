@@ -147,6 +147,10 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  logger.info({ host: HOST, port: PORT }, "Marine Dashboard Node service running");
-});
+if (require.main === module) {
+  server.listen(PORT, HOST, () => {
+    logger.info({ host: HOST, port: PORT }, "Marine Dashboard Node service running");
+  });
+}
+
+module.exports = { app, server, io };
