@@ -36,6 +36,7 @@ router.post("/positions", requireAisIngestKey, async (req, res) => {
       headingDegrees,
       positionSource,
       sourceDeviceId,
+      sourceEventId,
       sourceTimestamp
     } = req.body || {};
 
@@ -121,6 +122,23 @@ router.post("/positions", requireAisIngestKey, async (req, res) => {
     const normalizedDeviceId =
       String(sourceDeviceId || "").trim() || null;
 
+    const normalizedSourceEventId =
+      String(sourceEventId || "").trim() || null;
+
+    if (normalizedSourceEventId && !normalizedDeviceId) {
+      return res.status(400).json({
+        success: false,
+        error: "sourceDeviceId is required when sourceEventId is provided"
+      });
+    }
+
+    if (normalizedSourceEventId && normalizedSourceEventId.length > 150) {
+      return res.status(400).json({
+        success: false,
+        error: "sourceEventId must be 150 characters or fewer"
+      });
+    }
+
     let normalizedSourceTimestamp = null;
 
     if (sourceTimestamp !== undefined && sourceTimestamp !== null) {
@@ -174,39 +192,100 @@ router.post("/positions", requireAisIngestKey, async (req, res) => {
       .slice(0, 19)
       .replace("T", " ");
 
-    const [result] = await pool.query(
-      `
-        INSERT INTO vessel_positions (
-          vessel_id,
-          latitude,
-          longitude,
-          speed_knots,
-          heading_degrees,
-          position_source,
-          source_device_id,
-          source_timestamp,
-          recorded_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-        vessel.id,
-        normalizedLatitude,
-        normalizedLongitude,
-        normalizedSpeed,
-        normalizedHeading,
-        normalizedSource,
-        normalizedDeviceId,
-        normalizedSourceTimestamp,
-        recordedAt
-      ]
-    );
+    let result;
+
+    try {
+      [result] = await pool.query(
+        `
+          INSERT INTO vessel_positions (
+            vessel_id,
+            latitude,
+            longitude,
+            speed_knots,
+            heading_degrees,
+            position_source,
+            source_device_id,
+            source_event_id,
+            source_timestamp,
+            recorded_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          vessel.id,
+          normalizedLatitude,
+          normalizedLongitude,
+          normalizedSpeed,
+          normalizedHeading,
+          normalizedSource,
+          normalizedDeviceId,
+          normalizedSourceEventId,
+          normalizedSourceTimestamp,
+          recordedAt
+        ]
+      );
+    } catch (error) {
+      if (
+        error?.code === "ER_DUP_ENTRY" &&
+        normalizedDeviceId &&
+        normalizedSourceEventId
+      ) {
+        const [existingRows] = await pool.query(
+          `
+            SELECT id
+            FROM vessel_positions
+            WHERE source_device_id = ?
+              AND source_event_id = ?
+            LIMIT 1
+          `,
+          [normalizedDeviceId, normalizedSourceEventId]
+        );
+
+        if (existingRows.length > 0) {
+          const existingPositionId = Number(existingRows[0].id);
+
+          logger.info({
+            vesselId: Number(vessel.id),
+            vesselCode: vessel.vessel_code,
+            positionSource: normalizedSource,
+            sourceDeviceId: normalizedDeviceId,
+            sourceEventId: normalizedSourceEventId,
+            positionId: existingPositionId
+          }, "Duplicate AIS/GPS position ignored");
+
+          return res.status(200).json({
+            success: true,
+            message: "Position already recorded",
+            data: {
+              id: existingPositionId,
+              vesselId: Number(vessel.id),
+              vesselCode: vessel.vessel_code,
+              vesselName: vessel.name,
+              mmsi: normalizedMmsi,
+              latitude: normalizedLatitude,
+              longitude: normalizedLongitude,
+              speedKnots: normalizedSpeed,
+              headingDegrees: normalizedHeading,
+              positionSource: normalizedSource,
+              sourceDeviceId: normalizedDeviceId,
+              sourceEventId: normalizedSourceEventId,
+              sourceTimestamp: normalizedSourceTimestamp,
+              recordedAt
+            },
+            generatedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      throw error;
+    }
 
     logger.info({
       vesselId: Number(vessel.id),
       vesselCode: vessel.vessel_code,
       positionSource: normalizedSource,
       sourceDeviceId: normalizedDeviceId,
+      sourceEventId: normalizedSourceEventId,
       positionId: Number(result.insertId)
     }, "AIS/GPS position recorded");
 
@@ -225,6 +304,7 @@ router.post("/positions", requireAisIngestKey, async (req, res) => {
         headingDegrees: normalizedHeading,
         positionSource: normalizedSource,
         sourceDeviceId: normalizedDeviceId,
+        sourceEventId: normalizedSourceEventId,
         sourceTimestamp: normalizedSourceTimestamp,
         recordedAt
       },

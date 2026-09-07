@@ -150,6 +150,153 @@ describe("AIS authentication and ingestion routes", () => {
     expect(logger.info).toHaveBeenCalled();
   });
 
+  test("accepts a source event ID with a source device ID", async () => {
+    pool.query
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 3,
+            vessel_code: "MD-003",
+            name: "Atlantic Star",
+            status: "active"
+          }
+        ]
+      ])
+      .mockResolvedValueOnce([
+        {
+          insertId: 103
+        }
+      ]);
+
+    const response = await request(app)
+      .post("/api/ais/positions")
+      .set("X-AIS-API-Key", validKey)
+      .send({
+        mmsi: "111222333",
+        latitude: 5.5,
+        longitude: 6.5,
+        positionSource: "ais",
+        sourceDeviceId: "provider-01",
+        sourceEventId: "event-0001"
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({
+      id: 103,
+      vesselId: 3,
+      sourceDeviceId: "provider-01",
+      sourceEventId: "event-0001"
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(2);
+  });
+
+  test("rejects a source event ID without a source device ID", async () => {
+    const response = await request(app)
+      .post("/api/ais/positions")
+      .set("X-AIS-API-Key", validKey)
+      .send({
+        mmsi: "123456789",
+        latitude: 4.8123,
+        longitude: 4.9012,
+        sourceEventId: "event-without-device"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      error: "sourceDeviceId is required when sourceEventId is provided"
+    });
+
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test("rejects a source event ID longer than 150 characters", async () => {
+    const response = await request(app)
+      .post("/api/ais/positions")
+      .set("X-AIS-API-Key", validKey)
+      .send({
+        mmsi: "123456789",
+        latitude: 4.8123,
+        longitude: 4.9012,
+        sourceDeviceId: "provider-01",
+        sourceEventId: "x".repeat(151)
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      error: "sourceEventId must be 150 characters or fewer"
+    });
+
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test("returns the existing position for a duplicate source event", async () => {
+    pool.query
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 4,
+            vessel_code: "MD-004",
+            name: "Coastal Runner",
+            status: "active"
+          }
+        ]
+      ])
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Duplicate entry"), {
+          code: "ER_DUP_ENTRY"
+        })
+      )
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 104
+          }
+        ]
+      ]);
+
+    const response = await request(app)
+      .post("/api/ais/positions")
+      .set("X-AIS-API-Key", validKey)
+      .send({
+        mmsi: "444555666",
+        latitude: 4.1,
+        longitude: 5.2,
+        speedKnots: 10,
+        headingDegrees: 90,
+        positionSource: "ais",
+        sourceDeviceId: "provider-02",
+        sourceEventId: "event-duplicate-001",
+        sourceTimestamp: "2026-09-06T12:00:00Z"
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      message: "Position already recorded",
+      data: {
+        id: 104,
+        vesselId: 4,
+        sourceDeviceId: "provider-02",
+        sourceEventId: "event-duplicate-001"
+      }
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(3);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vesselId: 4,
+        sourceDeviceId: "provider-02",
+        sourceEventId: "event-duplicate-001",
+        positionId: 104
+      }),
+      "Duplicate AIS/GPS position ignored"
+    );
+  });
+
   test("accepts a valid Bearer token", async () => {
     pool.query
       .mockResolvedValueOnce([

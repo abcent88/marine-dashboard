@@ -47,6 +47,7 @@ const REQUIRED_COLUMNS = {
     "heading_degrees",
     "position_source",
     "source_device_id",
+    "source_event_id",
     "source_timestamp",
     "recorded_at"
   ],
