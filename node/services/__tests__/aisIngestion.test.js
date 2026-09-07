@@ -8,8 +8,15 @@ jest.mock("../../lib/logger", () => ({
   error: jest.fn()
 }));
 
+jest.mock("../../lib/metrics", () => ({
+  increment: jest.fn(),
+  getCounters: jest.fn(),
+  reset: jest.fn()
+}));
+
 const pool = require("../../db");
 const logger = require("../../lib/logger");
+const metrics = require("../../lib/metrics");
 
 const {
   AisIngestionError,
@@ -333,6 +340,13 @@ describe("AIS ingestion service", () => {
         }),
         "AIS/GPS position recorded"
       );
+
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.received"
+      );
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.accepted"
+      );
     });
 
     test("returns a duplicate result through the orchestration path", async () => {
@@ -371,6 +385,35 @@ describe("AIS ingestion service", () => {
         }),
         "AIS/GPS position already recorded"
       );
+
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.received"
+      );
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.duplicates"
+      );
+    });
+
+    test("counts unexpected database errors separately", async () => {
+      const databaseError = new Error("database unavailable");
+
+      pool.query.mockRejectedValueOnce(databaseError);
+
+      await expect(ingestPosition({
+        mmsi: "123456789",
+        latitude: 5.5,
+        longitude: 7.2
+      })).rejects.toBe(databaseError);
+
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.received"
+      );
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.errors"
+      );
+      expect(metrics.increment).not.toHaveBeenCalledWith(
+        "ais.ingestion.rejected"
+      );
     });
 
     test("does not access the database when validation fails", async () => {
@@ -382,6 +425,13 @@ describe("AIS ingestion service", () => {
       );
 
       expect(pool.query).not.toHaveBeenCalled();
+
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.received"
+      );
+      expect(metrics.increment).toHaveBeenCalledWith(
+        "ais.ingestion.rejected"
+      );
     });
   });
 });

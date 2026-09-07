@@ -1,5 +1,6 @@
 const pool = require("../db");
 const logger = require("../lib/logger");
+const metrics = require("../lib/metrics");
 
 class AisIngestionError extends Error {
   constructor(status, message) {
@@ -266,28 +267,46 @@ async function insertPosition(vessel, position) {
 }
 
 async function ingestPosition(body) {
-  const position = normalizePositionPayload(body);
-  const vessel = await resolveVessel(position.mmsi);
-  const persisted = await insertPosition(vessel, position);
+  metrics.increment("ais.ingestion.received");
 
-  logger.info({
-    vesselId: Number(vessel.id),
-    vesselCode: vessel.vessel_code,
-    positionSource: position.positionSource,
-    sourceDeviceId: position.sourceDeviceId,
-    sourceEventId: position.sourceEventId,
-    positionId: persisted.id
-  }, persisted.duplicate
-    ? "AIS/GPS position already recorded"
-    : "AIS/GPS position recorded");
+  try {
+    const position = normalizePositionPayload(body);
+    const vessel = await resolveVessel(position.mmsi);
+    const persisted = await insertPosition(vessel, position);
 
-  return {
-    ...position,
-    ...persisted,
-    vesselId: Number(vessel.id),
-    vesselCode: vessel.vessel_code,
-    vesselName: vessel.name
-  };
+    if (persisted.duplicate) {
+      metrics.increment("ais.ingestion.duplicates");
+    } else {
+      metrics.increment("ais.ingestion.accepted");
+    }
+
+    logger.info({
+      vesselId: Number(vessel.id),
+      vesselCode: vessel.vessel_code,
+      positionSource: position.positionSource,
+      sourceDeviceId: position.sourceDeviceId,
+      sourceEventId: position.sourceEventId,
+      positionId: persisted.id
+    }, persisted.duplicate
+      ? "AIS/GPS position already recorded"
+      : "AIS/GPS position recorded");
+
+    return {
+      ...position,
+      ...persisted,
+      vesselId: Number(vessel.id),
+      vesselCode: vessel.vessel_code,
+      vesselName: vessel.name
+    };
+  } catch (error) {
+    if (error instanceof AisIngestionError) {
+      metrics.increment("ais.ingestion.rejected");
+    } else {
+      metrics.increment("ais.ingestion.errors");
+    }
+
+    throw error;
+  }
 }
 
 module.exports = {

@@ -1012,3 +1012,20 @@ BACKED UP → REVIEWED → TESTED → COMMITTED → PUSHED → DEPLOYED → VERI
 ```
 
 If a change affects the database, authentication, vessel tracking, or production security, stop and review the complete change before deployment.
+
+
+## 37. AIS Ingestion Observability
+
+The Node service exposes ingestion counters at `GET /metrics`.
+
+| Metric | Meaning |
+|---|---|
+| `ais.ingestion.received` | AIS/GPS ingestion attempts received |
+| `ais.ingestion.accepted` | New positions successfully persisted |
+| `ais.ingestion.duplicates` | Duplicate event IDs detected |
+| `ais.ingestion.rejected` | Invalid or otherwise rejected requests |
+| `ais.ingestion.errors` | Unexpected ingestion or database errors |
+
+The counters are lightweight, vendor-neutral, in-memory runtime counters. They reset when the Node process restarts and are local to each application process, so they are not a substitute for durable historical telemetry.
+
+Counters are updated at the AIS ingestion service boundary so validation failures, successful persistence, duplicate events, and unexpected errors are measured consistently across the ingestion workflow.
