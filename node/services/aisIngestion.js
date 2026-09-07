@@ -181,6 +181,13 @@ async function resolveVessel(mmsi) {
     );
   }
 
+  if (vessel.status === "out_of_service") {
+    throw new AisIngestionError(
+      409,
+      "Cannot record a position for an out-of-service vessel"
+    );
+  }
+
   return vessel;
 }
 

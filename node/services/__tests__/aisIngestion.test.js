@@ -185,6 +185,24 @@ describe("AIS ingestion service", () => {
         )
       );
     });
+
+    test("rejects an out-of-service vessel", async () => {
+      pool.query.mockResolvedValueOnce([[
+        {
+          id: 8,
+          vessel_code: "MV-002",
+          name: "Out Of Service Vessel",
+          status: "out_of_service"
+        }
+      ]]);
+
+      await expect(resolveVessel("123456789")).rejects.toEqual(
+        new AisIngestionError(
+          409,
+          "Cannot record a position for an out-of-service vessel"
+        )
+      );
+    });
   });
 
   describe("insertPosition", () => {
