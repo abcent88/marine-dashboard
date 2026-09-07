@@ -175,8 +175,8 @@ describe("Reports routes", () => {
     });
 
     expect(response.body.data.production.totalCatchKg).toBe(7500);
-    expect(response.body.data.production.targetKg).toBe(15000);
-    expect(response.body.data.production.catchProgressPercent).toBe(50);
+    expect(response.body.data.production.targetKg).toBe(2000);
+    expect(response.body.data.production.catchProgressPercent).toBe(375);
     expect(response.body.data.production.catchPerLiterKg).toBe(3);
     expect(response.body.data.production.recordCount).toBe(25);
     expect(response.body.data.production.speciesCount).toBe(4);
@@ -325,7 +325,7 @@ describe("Reports routes", () => {
 
     expect(response.body.data.production).toEqual({
       totalCatchKg: 0,
-      targetKg: 15000,
+      targetKg: 0,
       catchProgressPercent: 0,
       recordCount: 0,
       speciesCount: 0,

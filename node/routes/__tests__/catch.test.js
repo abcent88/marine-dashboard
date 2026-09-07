@@ -69,6 +69,8 @@ describe("Catch routes", () => {
       ]
     ]);
 
+    pool.query.mockResolvedValueOnce([[{ target_capture_kg: "15000" }]]);
+
     const response = await request(app)
       .get("/api/catch");
 
@@ -163,7 +165,7 @@ describe("Catch routes", () => {
     ]);
 
     expect(response.body.generatedAt).toEqual(expect.any(String));
-    expect(pool.query).toHaveBeenCalledTimes(1);
+    expect(pool.query).toHaveBeenCalledTimes(2);
   });
 
   test("GET /api/catch applies fallback values for incomplete catch records", async () => {
@@ -186,6 +188,8 @@ describe("Catch routes", () => {
         }
       ]
     ]);
+
+    pool.query.mockResolvedValueOnce([[{ target_capture_kg: "15000" }]]);
 
     const response = await request(app)
       .get("/api/catch");

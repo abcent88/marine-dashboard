@@ -1,4 +1,4 @@
-const $ = (id) => document.getElementById(id);
+window.$ = (id) => document.getElementById(id);
 
 const API_BASE = "";
 
@@ -88,11 +88,10 @@ async function init(){
   setHeader();
   setShips();
   setBothShips();
-  setAI();
-  setCapture("mackerel");
+  setCatchInsight();
+  setCapture();
   setCaptains();
   setRadar();
-  wireCaptureTabs();
 
   /*
    * Logout

@@ -55,12 +55,13 @@ module.exports = [
         pct: "readonly",
         capacityChart: "writable",
         makeDoughnut: "readonly",
-        openEditVesselModal: "readonly"
+        openEditVesselModal: "readonly",
+        setCatchInsight: "readonly"
       }
     },
     rules: {
       "no-unused-vars": ["warn", {
-        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement|setHeader|makeDoughnut|setShips|setBothShips|setAI|setCapture|setCaptains|setRadar|wireCaptureTabs|openEditVesselModal)$"
+        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement|setHeader|makeDoughnut|setShips|setBothShips|setAI|setCapture|setCaptains|setRadar|setCatchInsight|wireCaptureTabs|openEditVesselModal)$"
       }],
       "no-undef": "error",
       "no-unreachable": "error"

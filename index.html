@@ -41,11 +41,11 @@
   <span>⎋</span>
 </button>
           <div class="mini-kpi">
-            <div class="mini-label">Sales this month</div>
+            <div class="mini-label">Latest recorded sales</div>
             <div class="mini-value" id="kpiSales">$0</div>
           </div>
           <div class="mini-kpi">
-            <div class="mini-label">Everyday performance</div>
+            <div class="mini-label">Latest performance</div>
             <div class="mini-value" id="kpiPerf">0%</div>
           </div>
           <div class="mini-pill">
@@ -79,7 +79,7 @@
               <canvas id="capacityGauge" width="220" height="220"></canvas>
               <div class="gauge-center">
                 <div class="gauge-value" id="capacityPct">0%</div>
-                <div class="muted small">Capacity used</div>
+                <div class="muted small">Active capacity</div>
                 <div class="muted small" id="capacityTons">0 t</div>
               </div>
             </div>
@@ -95,7 +95,7 @@
             </div>
             <div class="list-item">
               <span class="dot warn"></span>
-              <span>Restricted capacity</span>
+              <span>Restricted vessels</span>
               <span class="right" id="statRestricted">0</span>
             </div>
             <div class="list-item">
@@ -138,36 +138,36 @@
             </div>
 
             <div class="mini-panel glass">
-              <div class="mini-panel-title">Capacity on both ships</div>
+              <div class="mini-panel-title">Active fleet capacity</div>
               <div class="progress">
                 <div class="progress-bar" id="bothShipsBar" style="width: 0%"></div>
               </div>
               <div class="progress-foot">
-                <span class="muted small">Recovery</span>
+                <span class="muted small">Active vessels</span>
                 <span class="muted small" id="recoveryPct">0%</span>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- Right: AI Assistant / Fish card -->
+        <!-- Right: Catch insight card -->
         <section class="card glass">
           <div class="card-head">
-            <div class="card-title">AI Assistant</div>
-            <div class="chip">Rank #1</div>
+            <div class="card-title">Catch Insight</div>
+            <div class="chip">Leading species</div>
           </div>
 
           <div class="fish">
-            <div class="fish-name" id="fishName">Pacific Mackerel</div>
-            <div class="muted small" id="fishMeta">Ocean-caught • Coral Sea</div>
+            <div class="fish-name" id="fishName">Loading...</div>
+            <div class="muted small" id="fishMeta">Live catch data</div>
             <div class="kv">
               <div class="kv-item">
-                <div class="muted small">Market share</div>
+                <div class="muted small">Catch share</div>
                 <div class="kv-val" id="fishShare">0%</div>
               </div>
               <div class="kv-item">
-                <div class="muted small">Annual</div>
-                <div class="kv-val" id="fishAnnual">0 tons</div>
+                <div class="muted small">Recorded catch</div>
+                <div class="kv-val" id="fishAnnual">0 kg</div>
               </div>
             </div>
           </div>
@@ -176,8 +176,8 @@
 
           <div class="meter">
             <div class="meter-label">
-              <span>Sustainability rating</span>
-              <span class="muted small" id="sustainScore">0/100</span>
+              <span>Share of recorded catch</span>
+              <span class="muted small" id="sustainScore">0%</span>
             </div>
             <canvas id="sustainGauge" height="120"></canvas>
             <button class="btn ghost">View Details</button>
@@ -203,12 +203,7 @@
               <div class="progress-bar" id="captureBar" style="width: 0%"></div>
             </div>
 
-            <div class="muted small">By type</div>
-            <div class="seg">
-              <button class="seg-btn active" data-type="mackerel">Pacific Mackerel</button>
-              <button class="seg-btn" data-type="salmon">Salmon</button>
-              <button class="seg-btn" data-type="others">Others</button>
-            </div>
+            <div class="muted small">Live species breakdown</div>
 
             <div class="breakdown" id="typeBreakdown"></div>
 
@@ -221,13 +216,11 @@
           <div class="card-head">
             <div class="card-title">Captains</div>
             <div class="filters">
-              <select id="shiftSelect">
-                <option value="all">Shift: All</option>
-                <option value="day">Day</option>
-                <option value="night">Night</option>
-              </select>
-              <select id="zoneSelect">
-                <option value="all">Zone: All</option>
+              <select id="crewStatusSelect">
+                <option value="all">Status: All</option>
+                <option value="active">Active</option>
+                <option value="on_leave">On Leave</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
           </div>
@@ -235,7 +228,7 @@
           <div class="captains" id="captainsList"></div>
         </section>
 
-        <!-- Bottom right: Map panel (simple radar-like mock) -->
+        <!-- Bottom right: Live vessel tracking -->
         <section class="card glass wide">
           <div class="card-head">
             <div class="card-title">Tracking</div>
@@ -245,16 +238,16 @@
           <div class="radar">
             <div class="radar-left">
               <div class="muted small">Active zone</div>
-              <div class="radar-title" id="radarZone">Pacific</div>
-              <div class="muted small" id="radarMeta">2 ships • 1 route</div>
+              <div class="radar-title" id="radarZone">Live positions</div>
+              <div class="muted small" id="radarMeta">Loading vessel positions...</div>
 
               <div class="tiny-kv">
                 <div>
                   <div class="muted small">Ocean</div>
-                  <div class="kv-val" id="radarOcean">Coral Sea</div>
+                  <div class="kv-val" id="radarOcean">Loading...</div>
                 </div>
                 <div>
-                  <div class="muted small">Annual</div>
+                  <div class="muted small">Recorded catch</div>
                   <div class="kv-val" id="radarAnnual">0</div>
                 </div>
               </div>
@@ -1365,7 +1358,6 @@
   </div>
 
   <script src="./session.js"></script>
-<script src="./data.js"></script>
 <script src="./node/public/js/utils.js"></script>
 <script src="./node/public/js/dashboard-ui.js"></script>
 <script src="./node/public/js/voyages.js"></script>

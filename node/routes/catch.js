@@ -37,6 +37,7 @@ router.get("/", async (req, res) => {
         c.id DESC
     `);
 
+    const [[targetRow]] = await pool.query(`SELECT target_capture_kg FROM daily_metrics ORDER BY metric_date DESC LIMIT 1`);
     const totalCatchKg = rows.reduce(
       (total, row) => total + Number(row.quantity_kg || 0),
       0
@@ -76,7 +77,7 @@ router.get("/", async (req, res) => {
       vesselMap.set(vesselKey, existingVessel);
     });
 
-    const targetKg = 15000;
+    const targetKg = Number(targetRow?.target_capture_kg || 0);
     const targetProgressPercent = targetKg > 0
       ? Number(((totalCatchKg / targetKg) * 100).toFixed(1))
       : 0;

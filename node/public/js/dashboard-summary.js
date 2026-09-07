@@ -1,3 +1,4 @@
+/* global setHeader, setShips, setBothShips, setCapture, setRadar */
 async function loadDashboardSummary(){
   try {
     const response = await fetch(`${API_BASE}/api/dashboard/summary`, {
@@ -35,7 +36,7 @@ async function loadDashboardSummary(){
 
     const update = document.getElementById("lastUpdate");
     if(update){
-      update.textContent = "Using fallback data";
+      update.textContent = "Live data unavailable";
     }
 
     return false;
@@ -48,111 +49,18 @@ async function loadDashboardSummary(){
 function applyLiveSummary(){
   if(!LIVE.summary) return;
 
-  const s = LIVE.summary;
+  setHeader();
+  setShips();
+  setBothShips();
 
   /*
-   * Fleet
+   * Operations and capture card.
+   *
+   * setCapture() uses only the live dashboard summary,
+   * including todayMetric and todaySpeciesBreakdown.
    */
-  if(s.vessels){
-    const vessels = s.vessels;
+  setCapture();
+  setRadar();
 
-    $("activeShips").textContent = vessels.active;
-    $("activeShipsSub").textContent =
-      `${vessels.active} / ${vessels.total}`;
-
-    $("totalCapacity").textContent =
-      Number(vessels.totalCapacityTons).toLocaleString();
-
-    $("statPracticable").textContent =
-      vessels.active;
-
-    $("statRestricted").textContent =
-      vessels.restricted;
-
-    $("statOut").textContent =
-      vessels.outOfService;
-
-    /*
-     * The capacity gauge currently represents fleet capacity.
-     * Until vessel utilization telemetry is connected, we use
-     * active-vessel capacity as the operational indicator.
-     */
-    const operationalPct = pct(
-      vessels.active,
-      vessels.total
-    );
-
-    $("capacityPct").textContent = `${operationalPct}%`;
-    $("capacityTons").textContent =
-      `${Number(vessels.totalCapacityTons).toLocaleString()} t`;
-
-    if(capacityChart){
-      capacityChart.destroy();
-    }
-
-    capacityChart = makeDoughnut(
-      "capacityGauge",
-      vessels.active,
-      vessels.total,
-      78
-    );
-  }
-
-  /*
-   * Operations
-   */
-  if(s.operations){
-    const operations = s.operations;
-
-    /*
-     * Database stores capture in kilograms.
-     * Existing UI displays pounds.
-     */
-    const captureKg = Number(operations.captureKg || 0);
-    const captureLb = Math.round(captureKg * 2.2046226218);
-
-    $("captureNow").textContent =
-      captureLb.toLocaleString();
-
-    /*
-     * The existing mock target remains temporarily until
-     * daily_metrics is exposed by the API.
-     */
-    const targetLb = Number(
-      window.MOCK?.capture?.targetLb || 30000
-    );
-
-    $("captureTarget").textContent =
-      targetLb.toLocaleString();
-
-    const capturePct = Math.min(
-      100,
-      (captureLb / targetLb) * 100
-    );
-
-    $("captureBar").style.width =
-      `${capturePct}%`;
-
-    /*
-     * Display the live alert count.
-     */
-    const alertsBadge = $("alertsBadge");
-
-    if(alertsBadge){
-      alertsBadge.textContent =
-        `Alerts ${operations.openAlerts}`;
-    }
-
-    /*
-     * Store live operational values for console/debugging
-     * and future dashboard cards.
-     */
-    LIVE.captureKg = captureKg;
-    LIVE.captureLb = captureLb;
-    LIVE.fuelConsumedLiters =
-      Number(operations.fuelConsumedLiters || 0);
-    LIVE.openAlerts =
-      Number(operations.openAlerts || 0);
-  }
 }
 

@@ -166,7 +166,7 @@ router.get("/summary", async (req, res) => {
 
     const totalCatchKg = Number(catchSummary.total_catch_kg || 0);
     const totalFuelLiters = Number(fuelSummary.total_fuel_liters || 0);
-    const targetKg = 15000;
+    const targetKg = Number(dailyRows[0]?.target_capture_kg || 0);
 
     const catchProgressPercent = targetKg > 0
       ? Number(((totalCatchKg / targetKg) * 100).toFixed(1))

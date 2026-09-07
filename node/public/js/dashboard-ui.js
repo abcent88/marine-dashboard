@@ -1,22 +1,22 @@
 function setHeader(){
-  /*
-   * Header values still use the existing mock data for now.
-   * We will connect sales, performance, port and weather
-   * to real sources in the next API expansion.
-   */
-  const h = window.MOCK.header;
+  const metric = LIVE.summary?.dailyMetric;
+
+  if(!metric){
+    $("kpiSales").textContent = "—";
+    $("kpiPerf").textContent = "—";
+    $("kpiPort").textContent = "—";
+    $("kpiTemp").textContent = "—";
+    return;
+  }
 
   $("kpiSales").textContent =
-    moneyShort(h.salesMonth);
+    moneyShort(Number(metric.salesAmount || 0));
 
   $("kpiPerf").textContent =
-    `${h.performance.toFixed(1)}%`;
+    `${Number(metric.performancePercent || 0).toFixed(1)}%`;
 
-  $("kpiPort").textContent =
-    h.port;
-
-  $("kpiTemp").textContent =
-    `${h.tempF}°F`;
+  $("kpiPort").textContent = "—";
+  $("kpiTemp").textContent = "—";
 }
 
 function makeDoughnut(canvasId, value, max, cutout=72){
@@ -55,34 +55,48 @@ function makeDoughnut(canvasId, value, max, cutout=72){
 }
 
 function setShips(){
-  const s = window.MOCK.ships;
+  const vessels = LIVE.summary?.vessels;
 
-  $("activeShips").textContent =
-    s.active;
+  if(!vessels){
+    $("activeShips").textContent = "—";
+    $("activeShipsSub").textContent = "—";
+    $("totalCapacity").textContent = "—";
+    $("statPracticable").textContent = "—";
+    $("statRestricted").textContent = "—";
+    $("statOut").textContent = "—";
+    $("capacityPct").textContent = "—";
+    $("capacityTons").textContent = "—";
+    return;
+  }
 
+  const totalCapacityTons = Number(vessels.totalCapacityTons || 0);
+  const activeCapacityTons = Number(vessels.activeCapacityTons || 0);
+  const operationalPct = pct(
+    activeCapacityTons,
+    totalCapacityTons
+  );
+
+  $("activeShips").textContent = vessels.active;
   $("activeShipsSub").textContent =
-    `${s.active} / ${s.total}`;
+    `${vessels.active} / ${vessels.total}`;
 
   $("totalCapacity").textContent =
-    s.totalCapacityTons.toLocaleString();
+    totalCapacityTons.toLocaleString();
 
   $("statPracticable").textContent =
-    s.status.practicable;
+    vessels.active;
 
   $("statRestricted").textContent =
-    s.status.restricted;
+    vessels.restricted;
 
   $("statOut").textContent =
-    s.status.outOfService;
-
-  const usedPct =
-    pct(s.usedCapacityTons, s.totalCapacityTons);
+    vessels.outOfService;
 
   $("capacityPct").textContent =
-    `${usedPct}%`;
+    `${operationalPct}%`;
 
   $("capacityTons").textContent =
-    `${s.usedCapacityTons.toLocaleString()} t`;
+    `${activeCapacityTons.toLocaleString()} t active`;
 
   if(capacityChart){
     capacityChart.destroy();
@@ -90,56 +104,120 @@ function setShips(){
 
   capacityChart = makeDoughnut(
     "capacityGauge",
-    s.usedCapacityTons,
-    s.totalCapacityTons,
+    activeCapacityTons,
+    totalCapacityTons,
     78
   );
 }
 
 function setBothShips(){
-  const b = window.MOCK.bothShips;
+  const vessels = LIVE.summary?.vessels;
+
+  if(!vessels){
+    $("bothShipsBar").style.width = "0%";
+    $("recoveryPct").textContent = "—";
+    return;
+  }
+
+  const totalCapacityTons =
+    Number(vessels.totalCapacityTons || 0);
+
+  const activeCapacityTons =
+    Number(vessels.activeCapacityTons || 0);
+
+  const capacityPct =
+    totalCapacityTons > 0
+      ? Math.min(
+          100,
+          (activeCapacityTons / totalCapacityTons) * 100
+        )
+      : 0;
 
   $("bothShipsBar").style.width =
-    `${b.capacityPct}%`;
+    `${capacityPct}%`;
 
   $("recoveryPct").textContent =
-    `${b.recoveryPct}%`;
+    `${vessels.active} / ${vessels.total}`;
 }
 
-function setAI(){
-  const ai = window.MOCK.ai;
+async function setCatchInsight(){
+  const name = $("fishName");
+  const meta = $("fishMeta");
+  const share = $("fishShare");
+  const total = $("fishAnnual");
+  const score = $("sustainScore");
 
-  $("fishName").textContent =
-    ai.fishName;
+  try {
+    const response = await fetch(`${API_BASE}/api/catch`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
 
-  $("fishMeta").textContent =
-    ai.meta;
+    if(!response.ok){
+      throw new Error(`Catch API returned HTTP ${response.status}`);
+    }
 
-  $("fishShare").textContent =
-    `${ai.marketShare}%`;
+    const result = await response.json();
 
-  $("fishAnnual").textContent =
-    `${ai.annualTons}K tons`;
+    if(!result.success || !result.data){
+      throw new Error("Invalid catch API response");
+    }
 
-  $("sustainScore").textContent =
-    `${ai.sustainabilityScore}/100`;
+    const breakdown = Array.isArray(result.data.speciesBreakdown)
+      ? result.data.speciesBreakdown
+      : [];
 
+    if(!breakdown.length || Number(result.data.summary?.totalCatchKg || 0) <= 0){
+      name.textContent = "No catch recorded";
+      meta.textContent = "Live catch data";
+      share.textContent = "0%";
+      total.textContent = "0 kg";
+      score.textContent = "0%";
+      renderCatchGauge(0);
+      return;
+    }
+
+    const leading = breakdown[0];
+    const totalCatchKg = Number(result.data.summary.totalCatchKg || 0);
+    const leadingCatchKg = Number(leading.quantityKg || 0);
+    const catchShare = totalCatchKg > 0
+      ? Math.round((leadingCatchKg / totalCatchKg) * 100)
+      : 0;
+
+    name.textContent = leading.species;
+    meta.textContent = "Leading species • all recorded catch";
+    share.textContent = `${catchShare}%`;
+    total.textContent = `${leadingCatchKg.toLocaleString()} kg`;
+    score.textContent = `${catchShare}%`;
+    renderCatchGauge(catchShare);
+
+  } catch(error) {
+    console.error("Unable to load catch insight:", error);
+
+    name.textContent = "Catch data unavailable";
+    meta.textContent = "Live catch data could not be loaded";
+    share.textContent = "—";
+    total.textContent = "—";
+    score.textContent = "—";
+    renderCatchGauge(0);
+  }
+}
+
+function renderCatchGauge(value){
   if(sustainChart){
     sustainChart.destroy();
   }
 
-  const ctx =
-    $("sustainGauge").getContext("2d");
+  const ctx = $("sustainGauge").getContext("2d");
 
   sustainChart = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["Score", "Remaining"],
+      labels: ["Catch share", "Remaining"],
       datasets: [{
-        data: [
-          ai.sustainabilityScore,
-          100 - ai.sustainabilityScore
-        ],
+        data: [value, 100 - value],
         borderWidth: 0
       }]
     },
@@ -159,158 +237,258 @@ function setAI(){
   });
 }
 
-function setCapture(typeKey="mackerel"){
-  const c = window.MOCK.capture;
+function setCapture(){
+  const summary = LIVE.summary;
 
-  $("captureTrend").textContent =
-    `+${c.trendPct.toFixed(1)}%`;
+  if(!summary){
+    $("captureTrend").textContent = "—";
+    $("captureNow").textContent = "—";
+    $("captureTarget").textContent = "—";
+    $("captureBar").style.width = "0%";
 
-  /*
-   * Fallback/mock display.
-   * Live capture values are applied by applyLiveSummary().
-   */
+    const wrap = $("typeBreakdown");
+    if(wrap){
+      wrap.innerHTML = `<div class="break"><div class="label">Live data unavailable</div><div class="val">—</div></div>`;
+    }
+    return;
+  }
+
+  const operations = summary.operations || {};
+  const todayMetric = summary.todayMetric;
+  const species = summary.todaySpeciesBreakdown || [];
+
+  const captureKg = Number(operations.captureKg || 0);
+  const captureLb = Math.round(captureKg * 2.2046226218);
+
   $("captureNow").textContent =
-    c.nowLb.toLocaleString();
+    captureLb.toLocaleString();
 
-  $("captureTarget").textContent =
-    c.targetLb.toLocaleString();
+  if(todayMetric){
+    const targetKg = Number(todayMetric.targetCaptureKg || 0);
+    const targetLb = Math.round(targetKg * 2.2046226218);
 
-  const p =
-    Math.min(
-      100,
-      (c.nowLb / c.targetLb) * 100
-    );
+    $("captureTarget").textContent =
+      targetLb.toLocaleString();
 
-  $("captureBar").style.width =
-    `${p}%`;
+    const progress =
+      targetLb > 0
+        ? Math.min(100, (captureLb / targetLb) * 100)
+        : 0;
 
-  const items =
-    c.byType[typeKey] || [];
+    $("captureBar").style.width =
+      `${progress}%`;
+  } else {
+    $("captureTarget").textContent = "—";
+    $("captureBar").style.width = "0%";
+  }
 
-  const wrap =
-    $("typeBreakdown");
+  $("captureTrend").textContent = "—";
+
+  const wrap = $("typeBreakdown");
+
+  if(!wrap) return;
+
+  if(species.length === 0){
+    wrap.innerHTML = `
+      <div class="break">
+        <div class="label">No catch recorded today</div>
+        <div class="val">0 lb</div>
+      </div>
+    `;
+    return;
+  }
 
   wrap.innerHTML =
-    items.map(x => `
-      <div class="break">
-        <div class="label">${x.label}</div>
-        <div class="val">${x.valueLb.toLocaleString()} lb</div>
-      </div>
-    `).join("");
+    species.map(item => {
+      const quantityKg = Number(item.quantityKg || 0);
+      const quantityLb = Math.round(quantityKg * 2.2046226218);
+
+      return `
+        <div class="break">
+          <div class="label">${escapeHtml(item.species || "Unknown")}</div>
+          <div class="val">${quantityLb.toLocaleString()} lb</div>
+        </div>
+      `;
+    }).join("");
 }
 
-function setCaptains(){
-  const {
-    zones,
-    list
-  } = window.MOCK.captains;
+async function setCaptains(){
+  const select = $("crewStatusSelect");
+  const list = $("captainsList");
 
-  const zoneSelect =
-    $("zoneSelect");
+  if(!select || !list) return;
 
-  zoneSelect.innerHTML =
-    `<option value="all">Zone: All</option>` +
-    zones.map(z =>
-      `<option value="${z}">${z}</option>`
-    ).join("");
+  list.innerHTML =
+    `<div class="muted small">Loading live crew data...</div>`;
 
-  const render = () => {
-    const shift =
-      $("shiftSelect").value;
+  try {
+    const response = await fetch(`${API_BASE}/api/crew`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
 
-    const zone =
-      $("zoneSelect").value;
+    if(!response.ok){
+      throw new Error(`Crew API returned HTTP ${response.status}`);
+    }
 
-    const filtered =
-      list.filter(c => {
-        const okShift =
-          shift === "all" ||
-          c.shift === shift;
+    const result = await response.json();
 
-        const okZone =
-          zone === "all" ||
-          c.zone === zone;
+    if(!result.success || !result.data || !Array.isArray(result.data.crew)){
+      throw new Error("Invalid crew API response");
+    }
 
-        return okShift && okZone;
-      });
+    const crew = result.data.crew.filter(member =>
+      String(member.position || "").toLowerCase() === "captain"
+    );
 
-    $("captainsList").innerHTML =
-      filtered.map(c => {
-        const initials =
-          c.name
-            .split(" ")
-            .map(p => p[0])
-            .slice(0, 2)
-            .join("");
+    const render = () => {
+      const status = select.value;
 
-        const pillClass =
-          c.status === "Active"
-            ? "ok"
-            : "warn";
+      const filtered = crew.filter(member =>
+        status === "all" ||
+        member.status === status
+      );
 
-        const navText =
-          c.nav
-            ? "In Navigation"
-            : "Docked";
+      if(filtered.length === 0){
+        list.innerHTML =
+          `<div class="muted small">No captains match this status.</div>`;
+        return;
+      }
 
-        return `
-          <div class="cap">
-            <div class="avatar">${initials}</div>
+      list.innerHTML =
+        filtered.map(member => {
+          const initials =
+            String(member.fullName || "?")
+              .trim()
+              .split(/\\s+/)
+              .map(part => part[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
 
-            <div>
-              <div class="name">${c.name}</div>
-              <div class="meta">
-                ${c.zone} • ${c.shift.toUpperCase()} shift
+          const statusLabel =
+            String(member.status || "unknown")
+              .replace(/_/g, " ")
+              .replace(/\\b\\w/g, char => char.toUpperCase());
+
+          const pillClass =
+            member.status === "active"
+              ? "ok"
+              : "warn";
+
+          const vesselLabel =
+            member.vesselCode && member.vesselName
+              ? `${escapeHtml(member.vesselCode)} • ${escapeHtml(member.vesselName)}`
+              : "No vessel assigned";
+
+          const vesselStatus =
+            member.vesselStatus
+              ? String(member.vesselStatus)
+                  .replace(/_/g, " ")
+                  .replace(/\\b\\w/g, char => char.toUpperCase())
+              : "Unknown";
+
+          const certification =
+            member.certification
+              ? escapeHtml(member.certification)
+              : "Certification not recorded";
+
+          return `
+            <div class="cap">
+              <div class="avatar">${escapeHtml(initials)}</div>
+
+              <div>
+                <div class="name">${escapeHtml(member.fullName || "Unknown")}</div>
+                <div class="meta">
+                  ${escapeHtml(member.position || "Crew")} • ${vesselLabel}
+                </div>
+                <div class="meta">
+                  Vessel status: ${escapeHtml(vesselStatus)}
+                </div>
               </div>
-              <div class="meta">
-                ${navText}
+
+              <div class="right">
+                <div class="pill ${pillClass}">
+                  ${escapeHtml(statusLabel)}
+                </div>
+
+                <div class="meta">
+                  ${certification}
+                </div>
               </div>
             </div>
+          `;
+        }).join("");
+    };
 
-            <div class="right">
-              <div class="pill ${pillClass}">
-                ${c.status}
-              </div>
+    select.onchange = render;
+    render();
 
-              <div class="meta">
-                Utilization:
-                <b>${c.util}%</b>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("");
-  };
+  } catch(error) {
+    console.error("Unable to load live crew data:", error);
 
-  $("shiftSelect")
-    .addEventListener("change", render);
+    list.innerHTML =
+      `<div class="muted small">Live crew data unavailable</div>`;
+  }
+}
 
-  $("zoneSelect")
-    .addEventListener("change", render);
+function formatPositionTimestamp(value){
+  if(!value) return "time unavailable";
 
-  render();
+  const date = new Date(String(value).replace(" ", "T"));
+
+  if(Number.isNaN(date.getTime())){
+    return String(value);
+  }
+
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
 }
 
 function setRadar(){
-  const r = window.MOCK.radar;
+  const tracking = LIVE.summary?.tracking;
+  const positions = tracking?.positions || [];
 
-  $("radarZone").textContent =
-    r.zoneTitle;
+  const zone = $("radarZone");
+  const ocean = $("radarOcean");
+  const annual = $("radarAnnual");
+  const meta = $("radarMeta");
+  const canvas = $("radarCanvas");
 
-  $("radarOcean").textContent =
-    r.ocean;
+  if(!canvas) return;
 
-  $("radarAnnual").textContent =
-    r.annual;
+  if(zone){
+    zone.textContent = positions.length > 0
+      ? "Latest vessel positions"
+      : "No vessel positions";
+  }
 
-  $("radarMeta").textContent =
-    `${r.ships.length} ships • 1 route`;
+  if(ocean){
+    ocean.textContent = "Coordinates";
+  }
 
-  const canvas =
-    $("radarCanvas");
+  if(annual){
+    annual.textContent = tracking
+      ? `${tracking.trackedVessels} tracked`
+      : "—";
+  }
 
-  const ctx =
-    canvas.getContext("2d");
+  if(meta){
+    const latest = positions[0];
+    const source = latest?.positionSource || "unknown";
+    const timestamp = latest?.sourceTimestamp || latest?.recordedAt;
+    const formattedTimestamp = formatPositionTimestamp(timestamp);
+
+    meta.textContent = latest
+      ? `${positions.length} vessel${positions.length === 1 ? "" : "s"} • ${source.toUpperCase()} • ${formattedTimestamp}`
+      : "No vessel positions available";
+  }
+
+  const ctx = canvas.getContext("2d");
 
   const draw = () => {
     const w = canvas.width;
@@ -365,28 +543,61 @@ function setRadar(){
 
     ctx.stroke();
 
-    ctx.beginPath();
+    if(positions.length === 0){
+      ctx.font =
+        "12px Inter, Arial";
 
-    r.route.forEach((p, idx) => {
-      if(idx === 0){
-        ctx.moveTo(p.x, p.y);
-      } else {
-        ctx.lineTo(p.x, p.y);
-      }
+      ctx.fillStyle =
+        "rgba(255,255,255,.55)";
+
+      ctx.textAlign = "center";
+
+      ctx.fillText(
+        "No vessel positions available",
+        w * 0.52,
+        h * 0.55
+      );
+
+      ctx.textAlign = "start";
+      return;
+    }
+
+    const latitudes =
+      positions.map(position => Number(position.latitude));
+
+    const longitudes =
+      positions.map(position => Number(position.longitude));
+
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLon = Math.min(...longitudes);
+    const maxLon = Math.max(...longitudes);
+
+    const latRange = Math.max(maxLat - minLat, 0.01);
+    const lonRange = Math.max(maxLon - minLon, 0.01);
+
+    const padding = 30;
+
+    const toCanvas = position => ({
+      x:
+        padding +
+        ((Number(position.longitude) - minLon) / lonRange) *
+        (w - padding * 2),
+      y:
+        h -
+        padding -
+        ((Number(position.latitude) - minLat) / latRange) *
+        (h - padding * 2)
     });
 
-    ctx.strokeStyle =
-      "rgba(140,220,255,.45)";
+    positions.forEach(position => {
+      const point = toCanvas(position);
 
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    r.ships.forEach(s => {
       ctx.beginPath();
 
       ctx.arc(
-        s.x,
-        s.y,
+        point.x,
+        point.y,
         6,
         0,
         Math.PI * 2
@@ -404,9 +615,9 @@ function setRadar(){
         "rgba(255,255,255,.75)";
 
       ctx.fillText(
-        s.label,
-        s.x + 10,
-        s.y + 4
+        position.vesselCode || "Vessel",
+        point.x + 10,
+        point.y + 4
       );
     });
   };
@@ -414,32 +625,6 @@ function setRadar(){
   draw();
 }
 
-function wireCaptureTabs(){
-  document
-    .querySelectorAll(".seg-btn")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        document
-          .querySelectorAll(".seg-btn")
-          .forEach(b =>
-            b.classList.remove("active")
-          );
-
-        btn.classList.add("active");
-
-        setCapture(
-          btn.dataset.type
-        );
-
-        /*
-         * Reapply live total after changing tabs.
-         */
-        if(LIVE.summary){
-          applyLiveSummary();
-        }
-      });
-    });
-}
 
 /*
  * No more fake random database values.
