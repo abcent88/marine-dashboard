@@ -143,7 +143,7 @@ describe("AIS authentication and ingestion routes", () => {
       positionSource: "ais",
       sourceDeviceId: "ais-provider-01",
       sourceTimestamp: "2026-09-06 11:30:00",
-      recordedAt: "2026-09-06 11:30:00"
+      recordedAt: expect.any(String)
     });
 
     expect(pool.query).toHaveBeenCalledTimes(2);

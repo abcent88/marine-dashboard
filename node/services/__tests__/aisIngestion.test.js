@@ -239,14 +239,17 @@ describe("AIS ingestion service", () => {
       sourceTimestamp: "2026-09-07 10:20:30"
     };
 
-    test("inserts a new position", async () => {
+    test("records ingestion time separately from source timestamp", async () => {
       pool.query.mockResolvedValueOnce([{ insertId: 42 }]);
+      const toISOStringSpy = jest
+        .spyOn(Date.prototype, "toISOString")
+        .mockReturnValue("2026-09-07T12:45:00.000Z");
 
       const result = await insertPosition(vessel, position);
 
       expect(result).toEqual({
         id: 42,
-        recordedAt: "2026-09-07 10:20:30",
+        recordedAt: "2026-09-07 12:45:00",
         duplicate: false
       });
 
@@ -262,15 +265,17 @@ describe("AIS ingestion service", () => {
           "device-1",
           "event-1",
           "2026-09-07 10:20:30",
-          "2026-09-07 10:20:30"
+          "2026-09-07 12:45:00"
         ]
       );
+
+      toISOStringSpy.mockRestore();
     });
 
     test("returns the existing position when a duplicate event is detected", async () => {
       pool.query
         .mockRejectedValueOnce({ code: "ER_DUP_ENTRY" })
-        .mockResolvedValueOnce([[{ id: 42 }]]);
+        .mockResolvedValueOnce([[{ id: 42, recorded_at: "2026-09-07 10:20:30" }]]);
 
       const result = await insertPosition(vessel, position);
 

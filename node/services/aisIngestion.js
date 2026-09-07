@@ -199,9 +199,7 @@ async function resolveVessel(mmsi) {
 }
 
 async function insertPosition(vessel, position) {
-  const recordedAt =
-    position.sourceTimestamp ||
-    new Date().toISOString().slice(0, 19).replace("T", " ");
+  const recordedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {
     const [result] = await pool.query(
@@ -247,7 +245,7 @@ async function insertPosition(vessel, position) {
     ) {
       const [existingRows] = await pool.query(
         `
-          SELECT id
+          SELECT id, recorded_at
           FROM vessel_positions
           WHERE source_device_id = ?
             AND source_event_id = ?
@@ -258,6 +256,7 @@ async function insertPosition(vessel, position) {
 
       if (existingRows.length > 0) {
         const existingPositionId = Number(existingRows[0].id);
+        const existingRecordedAt = existingRows[0].recorded_at;
 
         logger.info({
           vesselId: Number(vessel.id),
@@ -270,7 +269,7 @@ async function insertPosition(vessel, position) {
 
         return {
           id: existingPositionId,
-          recordedAt,
+          recordedAt: existingRecordedAt,
           duplicate: true
         };
       }
