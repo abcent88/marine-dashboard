@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 const logger = require("../lib/logger");
+const { fetchSeaSurfaceTemperature } = require("../services/environment");
 
 const router = express.Router();
 
@@ -117,6 +118,24 @@ router.get("/summary", async (req, res) => {
     `);
 
     const vessel = vesselRows[0];
+    const latestPosition = trackingRows[0] || null;
+
+    let environment = null;
+
+    if (latestPosition) {
+      try {
+        environment = await fetchSeaSurfaceTemperature(
+          Number(latestPosition.latitude),
+          Number(latestPosition.longitude)
+        );
+      } catch (error) {
+        logger.warn(
+          { err: error },
+          "Environment data unavailable"
+        );
+        environment = null;
+      }
+    }
     const captureKg = Number(catchRows[0].capture_kg || 0);
     const fuelConsumedLiters = Number(fuelRows[0].fuel_consumed_liters || 0);
     const openAlerts = Number(alertRows[0].open_alerts || 0);
@@ -161,6 +180,7 @@ router.get("/summary", async (req, res) => {
           recordCount: Number(row.record_count || 0)
         })),
         tracking,
+        environment,
         dailyMetric: dailyMetricRows.length > 0 ? {
           metricDate: dailyMetricRows[0].metric_date,
           salesAmount: Number(dailyMetricRows[0].sales_amount || 0),

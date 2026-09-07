@@ -38,6 +38,7 @@ describe("Vessels routes", () => {
           flag_country: "Nigeria",
           imo_number: "IMO1234567",
           call_sign: "5N-AS1",
+          mmsi: "636019001",
           capacity_tons: "500.50",
           status: "active",
           commissioned_date: "2020-05-15T00:00:00.000Z",
@@ -85,6 +86,7 @@ describe("Vessels routes", () => {
         flagCountry: "Nigeria",
         imoNumber: "IMO1234567",
         callSign: "5N-AS1",
+        mmsi: "636019001",
         capacityTons: 500.5,
         status: "active",
         commissionedDate: "2020-05-15",
@@ -168,6 +170,7 @@ describe("Vessels routes", () => {
           flag_country: "Nigeria",
           imo_number: "IMO7654321",
           call_sign: "5N-NH7",
+          mmsi: "636019007",
           capacity_tons: "650",
           status: "active",
           commissioned_date: "2026-09-06",
@@ -189,6 +192,7 @@ describe("Vessels routes", () => {
         flagCountry: " Nigeria ",
         imoNumber: " IMO7654321 ",
         callSign: " 5N-NH7 ",
+        mmsi: " 636019007 ",
         capacityTons: "650",
         status: "active",
         homePortId: "7",
@@ -208,6 +212,7 @@ describe("Vessels routes", () => {
         flagCountry: "Nigeria",
         imoNumber: "IMO7654321",
         callSign: "5N-NH7",
+        mmsi: "636019007",
         capacityTons: 650,
         status: "active",
         commissionedDate: "2026-09-06",
@@ -302,6 +307,29 @@ describe("Vessels routes", () => {
     expect(response.body).toEqual({
       success: false,
       error: "Invalid vessel status"
+    });
+
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["12345678", "mmsi must be a 9-digit number"],
+    ["1234567890", "mmsi must be a 9-digit number"],
+    ["12345ABCD", "mmsi must be a 9-digit number"]
+  ])("POST /api/vessels rejects invalid MMSI %s", async (mmsi, error) => {
+    const response = await request(app)
+      .post("/api/vessels")
+      .send({
+        vesselCode: "MV-009",
+        name: "MMSI Test",
+        vesselType: "support",
+        mmsi
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      error
     });
 
     expect(pool.query).not.toHaveBeenCalled();
@@ -412,7 +440,7 @@ describe("Vessels routes", () => {
 
     expect(response.body).toEqual({
       success: false,
-      error: "Vessel code or IMO number already exists"
+      error: "Vessel code, IMO number, or MMSI already exists"
     });
 
     expect(logger.error).toHaveBeenCalledWith(
@@ -461,6 +489,7 @@ describe("Vessels routes", () => {
           flag_country: "Nigeria",
           imo_number: "IMO4444444",
           call_sign: "5N-UR4",
+          mmsi: "636019004",
           capacity_tons: "900",
           status: "restricted",
           commissioned_date: "2024-03-10",
@@ -482,6 +511,7 @@ describe("Vessels routes", () => {
         flagCountry: " Nigeria ",
         imoNumber: " IMO4444444 ",
         callSign: " 5N-UR4 ",
+        mmsi: "636019004 ",
         capacityTons: "900",
         status: "restricted",
         homePortId: "4",
@@ -501,6 +531,7 @@ describe("Vessels routes", () => {
         flagCountry: "Nigeria",
         imoNumber: "IMO4444444",
         callSign: "5N-UR4",
+        mmsi: "636019004",
         capacityTons: 900,
         status: "restricted",
         commissionedDate: "2024-03-10",
@@ -594,6 +625,29 @@ describe("Vessels routes", () => {
       success: false,
       error: "vesselCode, name and vesselType are required"
     });
+  });
+
+  test.each([
+    ["12345678", "mmsi must be a 9-digit number"],
+    ["1234567890", "mmsi must be a 9-digit number"],
+    ["12345ABCD", "mmsi must be a 9-digit number"]
+  ])("PUT /api/vessels/:id rejects invalid MMSI %s", async (mmsi, error) => {
+    const response = await request(app)
+      .put("/api/vessels/1")
+      .send({
+        vesselCode: "MV-001",
+        name: "MMSI Test",
+        vesselType: "support",
+        mmsi
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      error
+    });
+
+    expect(pool.query).not.toHaveBeenCalled();
   });
 
   test("PUT /api/vessels/:id rejects an invalid status", async () => {
@@ -739,7 +793,7 @@ describe("Vessels routes", () => {
 
     expect(response.body).toEqual({
       success: false,
-      error: "Vessel code or IMO number already exists"
+      error: "Vessel code, IMO number, or MMSI already exists"
     });
 
     expect(logger.error).toHaveBeenCalledWith(

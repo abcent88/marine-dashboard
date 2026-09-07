@@ -15,8 +15,21 @@ function setHeader(){
   $("kpiPerf").textContent =
     `${Number(metric.performancePercent || 0).toFixed(1)}%`;
 
-  $("kpiPort").textContent = "—";
-  $("kpiTemp").textContent = "—";
+  const environment = LIVE.summary?.environment;
+  const latestPosition = LIVE.summary?.tracking?.positions?.[0];
+  const latitude = Number(latestPosition?.latitude);
+  const longitude = Number(latestPosition?.longitude);
+  const hasCoordinates =
+    Number.isFinite(latitude) && Number.isFinite(longitude);
+
+  $("kpiPort").textContent = hasCoordinates
+    ? `${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°`
+    : "—";
+
+  const temperature = Number(environment?.temperatureC);
+  $("kpiTemp").textContent = Number.isFinite(temperature)
+    ? `${temperature.toFixed(1)}°C`
+    : "—";
 }
 
 function makeDoughnut(canvasId, value, max, cutout=72){

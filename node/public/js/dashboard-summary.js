@@ -5,7 +5,8 @@ async function loadDashboardSummary(){
       method: "GET",
       headers: {
         "Accept": "application/json"
-      }
+      },
+      credentials: "include"
     });
 
     if(!response.ok){

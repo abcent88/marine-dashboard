@@ -21,6 +21,7 @@ router.get("/", async (req, res) => {
         v.flag_country,
         v.imo_number,
         v.call_sign,
+        v.mmsi,
         v.capacity_tons,
         v.status,
         DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
@@ -45,6 +46,7 @@ router.get("/", async (req, res) => {
       flagCountry: vessel.flag_country,
       imoNumber: vessel.imo_number,
       callSign: vessel.call_sign,
+      mmsi: vessel.mmsi,
       capacityTons: Number(vessel.capacity_tons),
       status: vessel.status,
       commissionedDate: vessel.commissioned_date
@@ -94,6 +96,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
       flagCountry,
       imoNumber,
       callSign,
+      mmsi,
       capacityTons,
       status,
       homePortId,
@@ -106,6 +109,14 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
     const normalizedFlag = String(flagCountry || "").trim() || null;
     const normalizedImo = String(imoNumber || "").trim() || null;
     const normalizedCallSign = String(callSign || "").trim() || null;
+    const normalizedMmsi = String(mmsi || "").trim() || null;
+
+    if(normalizedMmsi && !/^\d{9}$/.test(normalizedMmsi)){
+      return res.status(400).json({
+        success: false,
+        error: "mmsi must be a 9-digit number"
+      });
+    }
 
     if(!normalizedCode || !normalizedName || !normalizedType){
       return res.status(400).json({
@@ -183,6 +194,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
         flag_country,
         imo_number,
         call_sign,
+        mmsi,
         capacity_tons,
         status,
         home_port_id,
@@ -196,6 +208,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
       normalizedFlag,
       normalizedImo,
       normalizedCallSign,
+      normalizedMmsi,
       numericCapacity,
       normalizedStatus,
       normalizedHomePortId,
@@ -211,6 +224,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
         v.flag_country,
         v.imo_number,
         v.call_sign,
+        v.mmsi,
         v.capacity_tons,
         v.status,
         DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
@@ -240,6 +254,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
         flagCountry: vessel.flag_country,
         imoNumber: vessel.imo_number,
         callSign: vessel.call_sign,
+        mmsi: vessel.mmsi,
         capacityTons: Number(vessel.capacity_tons),
         status: vessel.status,
         commissionedDate: vessel.commissioned_date
@@ -264,7 +279,7 @@ router.post("/", requireRole("super_admin", "admin"), async (req, res) => {
     if(error && error.code === "ER_DUP_ENTRY"){
       return res.status(409).json({
         success: false,
-        error: "Vessel code or IMO number already exists"
+        error: "Vessel code, IMO number, or MMSI already exists"
       });
     }
 
@@ -298,6 +313,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
       flagCountry,
       imoNumber,
       callSign,
+      mmsi,
       capacityTons,
       status,
       homePortId,
@@ -316,6 +332,16 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
     const normalizedCallSign = callSign == null
       ? null
       : String(callSign).trim() || null;
+    const normalizedMmsi = mmsi == null
+      ? null
+      : String(mmsi).trim() || null;
+
+    if(normalizedMmsi && !/^\d{9}$/.test(normalizedMmsi)){
+      return res.status(400).json({
+        success: false,
+        error: "mmsi must be a 9-digit number"
+      });
+    }
     const normalizedStatus = String(status || "").trim();
     const normalizedHomePortId =
       homePortId == null || homePortId === ""
@@ -412,6 +438,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
         flag_country = ?,
         imo_number = ?,
         call_sign = ?,
+        mmsi = ?,
         capacity_tons = ?,
         status = ?,
         home_port_id = ?,
@@ -424,6 +451,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
       normalizedFlagCountry,
       normalizedImoNumber,
       normalizedCallSign,
+      normalizedMmsi,
       normalizedCapacity,
       normalizedStatus,
       normalizedHomePortId,
@@ -440,6 +468,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
         v.flag_country,
         v.imo_number,
         v.call_sign,
+        v.mmsi,
         v.capacity_tons,
         v.status,
         DATE_FORMAT(v.commissioned_date, '%Y-%m-%d') AS commissioned_date,
@@ -469,6 +498,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
         flagCountry: vessel.flag_country,
         imoNumber: vessel.imo_number,
         callSign: vessel.call_sign,
+        mmsi: vessel.mmsi,
         capacityTons: Number(vessel.capacity_tons),
         status: vessel.status,
         commissionedDate: vessel.commissioned_date
@@ -493,7 +523,7 @@ router.put("/:id", requireRole("super_admin", "admin"), async (req, res) => {
     if(error && error.code === "ER_DUP_ENTRY"){
       return res.status(409).json({
         success: false,
-        error: "Vessel code or IMO number already exists"
+        error: "Vessel code, IMO number, or MMSI already exists"
       });
     }
 

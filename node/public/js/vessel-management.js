@@ -110,6 +110,18 @@ function openVesselManagementModal(){
           </label>
 
           <label>
+            <span>MMSI</span>
+            <input
+              type="text"
+              name="mmsi"
+              maxlength="9"
+              inputmode="numeric"
+              pattern="[0-9]{9}"
+              placeholder="9-digit MMSI"
+            >
+          </label>
+
+          <label>
             <span>Capacity (tons) *</span>
             <input
               type="number"
@@ -242,6 +254,10 @@ function openVesselManagementModal(){
 
       callSign: String(
         formData.get("callSign") || ""
+      ).trim() || null,
+
+      mmsi: String(
+        formData.get("mmsi") || ""
       ).trim() || null,
 
       capacityTons: Number(
@@ -392,6 +408,9 @@ function openEditVesselModal(vesselId){
   const callSign =
     escapeHtml(vessel.callSign || "");
 
+  const mmsi =
+    escapeHtml(vessel.mmsi || "");
+
   const capacityTons =
     Number(vessel.capacityTons || 0);
 
@@ -509,6 +528,18 @@ function openEditVesselModal(vesselId){
               name="callSign"
               maxlength="50"
               value="${callSign}"
+            >
+          </label>
+
+          <label>
+            <span>MMSI</span>
+            <input
+              type="text"
+              name="mmsi"
+              maxlength="9"
+              inputmode="numeric"
+              pattern="[0-9]{9}"
+              value="${mmsi}"
             >
           </label>
 
@@ -698,6 +729,10 @@ function openEditVesselModal(vesselId){
 
         callSign: String(
           formData.get("callSign") || ""
+        ).trim() || null,
+
+        mmsi: String(
+          formData.get("mmsi") || ""
         ).trim() || null,
 
         capacityTons: Number(

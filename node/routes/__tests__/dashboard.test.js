@@ -6,11 +6,17 @@ jest.mock("../../db", () => ({
 }));
 
 jest.mock("../../lib/logger", () => ({
-  error: jest.fn()
+  error: jest.fn(),
+  warn: jest.fn()
+}));
+
+jest.mock("../../services/environment", () => ({
+  fetchSeaSurfaceTemperature: jest.fn()
 }));
 
 const pool = require("../../db");
 const logger = require("../../lib/logger");
+const { fetchSeaSurfaceTemperature } = require("../../services/environment");
 const dashboardRoutes = require("../dashboard");
 
 const app = express();
@@ -21,6 +27,13 @@ app.use("/api/dashboard", dashboardRoutes);
 describe("Dashboard routes", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    fetchSeaSurfaceTemperature.mockResolvedValue({
+      temperatureC: 27.4,
+      latitude: 4.8123,
+      longitude: 4.9012,
+      source: "Open-Meteo Marine API",
+      timestamp: "2026-09-07T21:15"
+    });
   });
 
   test("GET /api/dashboard/summary returns dashboard summary", async () => {
@@ -217,6 +230,15 @@ describe("Dashboard routes", () => {
       ]
     });
 
+    expect(response.body.data.environment).toEqual({
+      temperatureC: 27.4,
+      latitude: 4.8123,
+      longitude: 4.9012,
+      source: "Open-Meteo Marine API",
+      timestamp: "2026-09-07T21:15"
+    });
+
+    expect(fetchSeaSurfaceTemperature).toHaveBeenCalledWith(4.8123, 4.9012);
     expect(response.body.data.generatedAt).toEqual(expect.any(String));
 
     expect(pool.query).toHaveBeenCalledTimes(8);
@@ -301,7 +323,75 @@ describe("Dashboard routes", () => {
       positions: []
     });
 
+    expect(response.body.data.environment).toBeNull();
+    expect(fetchSeaSurfaceTemperature).not.toHaveBeenCalled();
+
     expect(pool.query).toHaveBeenCalledTimes(8);
+  });
+
+  test("GET /api/dashboard/summary remains available when environment data is unavailable", async () => {
+    fetchSeaSurfaceTemperature.mockResolvedValueOnce(null);
+
+    const queryResults = [
+      [[{
+        total_vessels: 1,
+        active_vessels: 1,
+        restricted_vessels: 0,
+        maintenance_vessels: 0,
+        out_of_service_vessels: 0,
+        total_capacity_tons: 1000,
+        active_capacity_tons: 1000
+      }]],
+      [[{
+        metric_date: "2026-09-07",
+        sales_amount: 1000,
+        performance_percent: 90
+      }]],
+      [[{
+        metric_date: "2026-09-07",
+        sales_amount: 1000,
+        performance_percent: 90
+      }]],
+      [[{
+        capture_kg: 100
+      }]],
+      [[{
+        fuel_consumed_liters: 50
+      }]],
+      [[{
+        species: "Tuna",
+        quantity_kg: 100,
+        record_count: 1
+      }]],
+      [[{
+        open_alerts: 0
+      }]],
+      [[{
+        id: 5,
+        vessel_id: 1,
+        vessel_code: "MD-001",
+        vessel_name: "Ocean Pioneer",
+        latitude: "4.8123",
+        longitude: "4.9012",
+        speed_knots: "12.50",
+        heading_degrees: "118.00",
+        position_source: "ais",
+        source_timestamp: "2026-09-06T11:40:00.000Z",
+        recorded_at: "2026-09-06T11:40:00.000Z"
+      }]]
+    ];
+
+    queryResults.forEach((result) => {
+      pool.query.mockResolvedValueOnce(result);
+    });
+
+    const response = await request(app)
+      .get("/api/dashboard/summary");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.environment).toBeNull();
+    expect(fetchSeaSurfaceTemperature).toHaveBeenCalledWith(4.8123, 4.9012);
   });
 
   test("GET /api/dashboard/summary returns 500 when a database query fails", async () => {
