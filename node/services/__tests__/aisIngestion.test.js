@@ -76,34 +76,49 @@ describe("AIS ingestion service", () => {
     test.each([
       ["missing MMSI", { latitude: 5, longitude: 7 }, "mmsi is required"],
       [
+        "non-numeric MMSI",
+        { mmsi: "12345678A", latitude: 5, longitude: 7 },
+        "mmsi must be a 9-digit numeric identifier"
+      ],
+      [
+        "short MMSI",
+        { mmsi: "12345678", latitude: 5, longitude: 7 },
+        "mmsi must be a 9-digit numeric identifier"
+      ],
+      [
+        "long MMSI",
+        { mmsi: "1234567890", latitude: 5, longitude: 7 },
+        "mmsi must be a 9-digit numeric identifier"
+      ],
+      [
         "invalid latitude",
-        { mmsi: "123", latitude: 91, longitude: 7 },
+        { mmsi: "123456789", latitude: 91, longitude: 7 },
         "latitude must be a number between -90 and 90"
       ],
       [
         "invalid longitude",
-        { mmsi: "123", latitude: 5, longitude: 181 },
+        { mmsi: "123456789", latitude: 5, longitude: 181 },
         "longitude must be a number between -180 and 180"
       ],
       [
         "invalid speed",
-        { mmsi: "123", latitude: 5, longitude: 7, speedKnots: -1 },
+        { mmsi: "123456789", latitude: 5, longitude: 7, speedKnots: -1 },
         "speedKnots must be a non-negative number"
       ],
       [
         "invalid heading",
-        { mmsi: "123", latitude: 5, longitude: 7, headingDegrees: 360 },
+        { mmsi: "123456789", latitude: 5, longitude: 7, headingDegrees: 360 },
         "headingDegrees must be between 0 and less than 360"
       ],
       [
         "invalid position source",
-        { mmsi: "123", latitude: 5, longitude: 7, positionSource: "radar" },
+        { mmsi: "123456789", latitude: 5, longitude: 7, positionSource: "radar" },
         "positionSource must be gps or ais"
       ],
       [
         "event without device",
         {
-          mmsi: "123",
+          mmsi: "123456789",
           latitude: 5,
           longitude: 7,
           sourceEventId: "event-1"
@@ -113,7 +128,7 @@ describe("AIS ingestion service", () => {
       [
         "event id too long",
         {
-          mmsi: "123",
+          mmsi: "123456789",
           latitude: 5,
           longitude: 7,
           sourceDeviceId: "device-1",
@@ -124,7 +139,7 @@ describe("AIS ingestion service", () => {
       [
         "invalid source timestamp",
         {
-          mmsi: "123",
+          mmsi: "123456789",
           latitude: 5,
           longitude: 7,
           sourceTimestamp: "not-a-date"

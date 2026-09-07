@@ -29,6 +29,13 @@ function normalizePositionPayload(body) {
     throw new AisIngestionError(400, "mmsi is required");
   }
 
+  if (!/^\d{9}$/.test(normalizedMmsi)) {
+    throw new AisIngestionError(
+      400,
+      "mmsi must be a 9-digit numeric identifier"
+    );
+  }
+
   const normalizedLatitude = Number(latitude);
   const normalizedLongitude = Number(longitude);
 
