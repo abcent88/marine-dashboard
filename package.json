@@ -6,6 +6,7 @@
     "lint": "npm --prefix node run lint",
     "verify": "bash scripts/verify-local.sh",
     "migrate": "npm --prefix node run migrate",
-    "verify-schema": "npm --prefix node run verify-schema"
+    "verify-schema": "npm --prefix node run verify-schema",
+    "ci:local": "npm run verify"
   }
 }
