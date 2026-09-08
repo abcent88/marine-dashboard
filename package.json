@@ -1,0 +1,11 @@
+{
+  "name": "marine-dashboard",
+  "private": true,
+  "scripts": {
+    "test": "npm --prefix node test",
+    "lint": "npm --prefix node run lint",
+    "verify": "bash scripts/verify-local.sh",
+    "migrate": "npm --prefix node run migrate",
+    "verify-schema": "npm --prefix node run verify-schema"
+  }
+}
