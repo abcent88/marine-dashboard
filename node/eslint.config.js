@@ -19,7 +19,11 @@ module.exports = [
         USER_ROLES: "readonly",
         USER_STATUSES: "readonly",
         LIVE_USERS: "writable",
-        loadUsers: "readonly"
+        loadUsers: "readonly",
+        loadVesselDetails: "readonly",
+        closeVesselDetails: "readonly",
+        bindVesselRowClicks: "readonly",
+        applyLiveVessels: "readonly"
       }
     },
     rules: {
@@ -69,7 +73,7 @@ module.exports = [
     },
     rules: {
       "no-unused-vars": ["warn", {
-        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement|setHeader|makeDoughnut|setShips|setBothShips|setAI|setCapture|setCaptains|setRadar|setCatchInsight|wireCaptureTabs|openEditVesselModal|openVesselManagementModalImpl|openEditVesselModalImpl|USER_ROLES|USER_STATUSES|loadUsers)$"
+        "varsIgnorePattern": "^(loadVoyages|loadVessels|loadVesselDetails|closeVesselDetails|bindVesselRowClicks|applyLiveVessels|loadDashboardSummary|loadCrew|loadCatch|loadAlerts|loadMaintenance|loadFuel|loadReports|initVesselManagement|initUserManagement|initEditUserManagement|setHeader|makeDoughnut|setShips|setBothShips|setAI|setCapture|setCaptains|setRadar|setCatchInsight|wireCaptureTabs|openEditVesselModal|openVesselManagementModalImpl|openEditVesselModalImpl|USER_ROLES|USER_STATUSES|loadUsers)$"
       }],
       "no-undef": "error",
       "no-unreachable": "error"
