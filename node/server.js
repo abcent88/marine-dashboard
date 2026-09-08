@@ -83,7 +83,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/ais", aisRoutes);
 
-app.use("/metrics", metricsRoutes);
+app.use("/metrics", requireAuth, metricsRoutes);
 
 app.get("/health", (req, res) => {
   res.json({
