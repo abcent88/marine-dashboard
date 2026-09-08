@@ -237,6 +237,15 @@ async function verifyDataIntegrity(db) {
         FROM vessel_fuel_logs
         WHERE quantity_liters < 0
       `
+    },
+    {
+      name: "orphan AIS source event IDs",
+      sql: `
+        SELECT COUNT(*) AS count
+        FROM vessel_positions
+        WHERE source_event_id IS NOT NULL
+          AND source_device_id IS NULL
+      `
     }
   ];
 
