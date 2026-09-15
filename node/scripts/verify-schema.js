@@ -21,7 +21,9 @@ const REQUIRED_TABLES = [
   "audit_logs",
   "schema_migrations",
   "sessions",
-  "vessel_marketplace_listings"
+  "vessel_marketplace_listings",
+  "charter_enquiries",
+  "charter_offers"
 ];
 
 const REQUIRED_COLUMNS = {
@@ -104,6 +106,38 @@ const REQUIRED_COLUMNS = {
     "currency_code",
     "verification_status",
     "listing_status",
+    "created_at",
+    "updated_at"
+  ],
+
+  charter_enquiries: [
+    "id",
+    "listing_id",
+    "requester_user_id",
+    "cargo_type",
+    "cargo_quantity_tons",
+    "origin_port_id",
+    "destination_port_id",
+    "requested_start_date",
+    "requested_end_date",
+    "message",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+
+  charter_offers: [
+    "id",
+    "enquiry_id",
+    "offered_by_user_id",
+    "parent_offer_id",
+    "amount",
+    "currency_code",
+    "rate_unit",
+    "charter_days",
+    "terms",
+    "status",
+    "expires_at",
     "created_at",
     "updated_at"
   ]
