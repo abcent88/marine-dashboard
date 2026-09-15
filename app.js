@@ -192,6 +192,13 @@ async function init(){
   initEditUserManagement();
 
   /*
+   * Initialize vessel marketplace and charter operations.
+   */
+  if (window.MarineMarketplace) {
+    MarineMarketplace.init();
+  }
+
+  /*
    * Refresh live data every 30 seconds.
    */
   loadReports();

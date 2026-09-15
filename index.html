@@ -780,6 +780,184 @@
   </div>
 </section>
 
+<!-- Vessel Marketplace & Charter Operations -->
+<section class="card glass wide marketplace-operations">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Vessel Marketplace &amp; Charter Operations</div>
+      <div class="muted small">
+        Search verified vessels available for charter and manage your charter enquiries
+      </div>
+    </div>
+
+    <div class="badge">
+      <span id="marketplaceListingCount">0</span> Available
+    </div>
+  </div>
+
+  <div class="marketplace-filters">
+    <div class="marketplace-field">
+      <label for="marketplaceCargoType" class="muted small">
+        Cargo Type
+      </label>
+      <input id="marketplaceCargoType" type="text" placeholder="e.g. Crude Oil">
+    </div>
+
+    <div class="marketplace-field">
+      <label for="marketplaceCharterType" class="muted small">
+        Charter Type
+      </label>
+      <select id="marketplaceCharterType">
+        <option value="">Any charter type</option>
+        <option value="voyage_charter">Voyage Charter</option>
+        <option value="time_charter">Time Charter</option>
+        <option value="bareboat">Bareboat</option>
+        <option value="contract_of_affreightment">Contract of Affreightment</option>
+      </select>
+    </div>
+
+    <div class="marketplace-field">
+      <label for="marketplaceVesselType" class="muted small">
+        Vessel Type
+      </label>
+      <input id="marketplaceVesselType" type="text" placeholder="e.g. tanker">
+    </div>
+
+    <div class="marketplace-field">
+      <label for="marketplaceMinCapacity" class="muted small">
+        Min Capacity (tons)
+      </label>
+      <input id="marketplaceMinCapacity" type="number" min="0" step="1" placeholder="0">
+    </div>
+
+    <div class="marketplace-field">
+      <label for="marketplaceMaxCapacity" class="muted small">
+        Max Capacity (tons)
+      </label>
+      <input id="marketplaceMaxCapacity" type="number" min="0" step="1" placeholder="Any">
+    </div>
+
+    <div class="marketplace-filter-actions">
+      <button type="button" class="btn" id="marketplaceApplyFilters">
+        Search Vessels
+      </button>
+
+      <button type="button" class="btn ghost" id="marketplaceClearFilters">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="marketplaceListingsBody" class="marketplace-listings">
+    <div class="marketplace-empty muted">
+      Loading available vessels...
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="card-head marketplace-subhead">
+    <div>
+      <div class="card-title">My Charter Enquiries</div>
+      <div class="muted small">
+        Track requests submitted against marketplace listings
+      </div>
+    </div>
+  </div>
+
+  <div id="charterEnquiriesBody">
+    <div class="marketplace-empty muted">
+      Loading your charter enquiries...
+    </div>
+  </div>
+
+  <div id="charterEnquiryForm" class="marketplace-enquiry-form" hidden>
+    <div class="marketplace-form-head">
+      <div>
+        <strong>Request Charter</strong>
+        <div id="charterSelectedVessel" class="muted small">
+          Select a marketplace vessel
+        </div>
+      </div>
+
+      <button type="button" class="btn ghost" id="charterEnquiryCancel">
+        Cancel
+      </button>
+    </div>
+
+    <form id="charterEnquirySubmitForm">
+      <input type="hidden" id="charterEnquiryListingId">
+
+      <div class="marketplace-form-grid">
+        <div class="marketplace-field">
+          <label for="charterEnquiryCargoType" class="muted small">
+            Cargo Type
+          </label>
+          <input id="charterEnquiryCargoType" type="text" placeholder="e.g. Crude Oil">
+        </div>
+
+        <div class="marketplace-field">
+          <label for="charterEnquiryCargoQuantity" class="muted small">
+            Cargo Quantity (tons)
+          </label>
+          <input id="charterEnquiryCargoQuantity" type="number" min="0" step="0.01" placeholder="e.g. 50000">
+        </div>
+
+        <div class="marketplace-field">
+          <label for="charterEnquiryOriginPortId" class="muted small">
+            Origin Port ID
+          </label>
+          <input id="charterEnquiryOriginPortId" type="number" min="1" step="1" placeholder="Optional">
+        </div>
+
+        <div class="marketplace-field">
+          <label for="charterEnquiryDestinationPortId" class="muted small">
+            Destination Port ID
+          </label>
+          <input id="charterEnquiryDestinationPortId" type="number" min="1" step="1" placeholder="Optional">
+        </div>
+
+        <div class="marketplace-field">
+          <label for="charterEnquiryStartDate" class="muted small">
+            Requested Start
+          </label>
+          <input id="charterEnquiryStartDate" type="date">
+        </div>
+
+        <div class="marketplace-field">
+          <label for="charterEnquiryEndDate" class="muted small">
+            Requested End
+          </label>
+          <input id="charterEnquiryEndDate" type="date">
+        </div>
+
+        <div class="marketplace-field marketplace-field-wide">
+          <label for="charterEnquiryMessage" class="muted small">
+            Enquiry Message
+          </label>
+          <textarea
+            id="charterEnquiryMessage"
+            rows="4"
+            placeholder="Describe the cargo movement, route or charter requirements."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="marketplace-form-actions">
+        <button type="submit" class="btn">
+          Submit Charter Enquiry
+        </button>
+
+        <button type="button" class="btn ghost" id="charterEnquiryCancelBottom">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
 <!-- Reports & Analytics -->
 <section class="card glass wide reports-operations">
   <div class="card-head">
@@ -1383,6 +1561,7 @@
 <script src="./node/public/js/vessel-management-add.js"></script>
 <script src="./node/public/js/vessel-management-edit.js"></script>
 <script src="./node/public/js/vessel-management.js"></script>
+<script src="./node/public/js/marketplace.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
