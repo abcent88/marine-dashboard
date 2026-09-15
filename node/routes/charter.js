@@ -517,4 +517,258 @@ router.post("/enquiries", async (req, res) => {
   }
 });
 
+
+/*
+ * POST /api/charter/enquiries/:id/offers
+ *
+ * Create the initial charter offer for an enquiry.
+ * Only the marketplace listing owner may make the initial offer.
+ */
+router.post("/enquiries/:id/offers", async (req, res) => {
+  try {
+    const enquiryId = Number(req.params.id);
+
+    if (!Number.isInteger(enquiryId) || enquiryId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "enquiry id must be a positive integer"
+      });
+    }
+
+    const amount = req.body.amount == null
+      ? null
+      : Number(req.body.amount);
+
+    const currencyCode = req.body.currencyCode == null
+      ? "USD"
+      : String(req.body.currencyCode).trim().toUpperCase();
+
+    const rateUnit = req.body.rateUnit == null
+      ? null
+      : String(req.body.rateUnit).trim();
+
+    const charterDays = req.body.charterDays == null
+      ? null
+      : Number(req.body.charterDays);
+
+    const terms = req.body.terms == null
+      ? null
+      : String(req.body.terms).trim();
+
+    const expiresAt = req.body.expiresAt == null
+      ? null
+      : String(req.body.expiresAt).trim();
+
+    if (
+      amount !== null &&
+      (!Number.isFinite(amount) || amount <= 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "amount must be a positive number"
+      });
+    }
+
+    if (!/^[A-Z]{3}$/.test(currencyCode)) {
+      return res.status(400).json({
+        success: false,
+        error: "currencyCode must be a 3-letter currency code"
+      });
+    }
+
+    const validRateUnits = [
+      "per_day",
+      "per_voyage",
+      "per_metric_ton",
+      "lump_sum"
+    ];
+
+    if (rateUnit !== null && !validRateUnits.includes(rateUnit)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid rateUnit"
+      });
+    }
+
+    if (
+      charterDays !== null &&
+      (!Number.isInteger(charterDays) || charterDays <= 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "charterDays must be a positive integer"
+      });
+    }
+
+    if (expiresAt !== null) {
+      const expiryDate = new Date(expiresAt);
+
+      if (
+        !expiresAt ||
+        Number.isNaN(expiryDate.getTime()) ||
+        expiryDate.getTime() <= Date.now()
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "expiresAt must be a valid future datetime"
+        });
+      }
+    }
+
+    const [enquiryRows] = await pool.query(
+      `
+        SELECT
+          e.id,
+          e.requester_user_id,
+          e.status,
+          l.listed_by_user_id
+        FROM charter_enquiries e
+        INNER JOIN vessel_marketplace_listings l
+          ON l.id = e.listing_id
+        WHERE e.id = ?
+        LIMIT 1
+      `,
+      [enquiryId]
+    );
+
+    const enquiry = enquiryRows[0];
+
+    if (!enquiry) {
+      return res.status(404).json({
+        success: false,
+        error: "Charter enquiry not found"
+      });
+    }
+
+    if (
+      Number(enquiry.listed_by_user_id) !==
+      Number(req.session.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: "Only the listing owner can make the initial offer"
+      });
+    }
+
+    const closedStatuses = [
+      "accepted",
+      "rejected",
+      "withdrawn",
+      "closed"
+    ];
+
+    if (closedStatuses.includes(enquiry.status)) {
+      return res.status(409).json({
+        success: false,
+        error: "This charter enquiry is no longer available for an offer"
+      });
+    }
+
+    if (enquiry.status === "offer_made") {
+      return res.status(409).json({
+        success: false,
+        error: "An initial offer has already been made for this enquiry"
+      });
+    }
+
+    const [result] = await pool.query(
+      `
+        INSERT INTO charter_offers (
+          enquiry_id,
+          offered_by_user_id,
+          parent_offer_id,
+          amount,
+          currency_code,
+          rate_unit,
+          charter_days,
+          terms,
+          status,
+          expires_at
+        )
+        VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'pending', ?)
+      `,
+      [
+        enquiryId,
+        req.session.user.id,
+        amount,
+        currencyCode,
+        rateUnit,
+        charterDays,
+        terms,
+        expiresAt
+      ]
+    );
+
+    await pool.query(
+      `
+        UPDATE charter_enquiries
+        SET status = 'offer_made'
+        WHERE id = ?
+      `,
+      [enquiryId]
+    );
+
+    const [rows] = await pool.query(
+      `
+        SELECT
+          id,
+          enquiry_id,
+          offered_by_user_id,
+          parent_offer_id,
+          amount,
+          currency_code,
+          rate_unit,
+          charter_days,
+          terms,
+          status,
+          expires_at,
+          created_at,
+          updated_at
+        FROM charter_offers
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [result.insertId]
+    );
+
+    const offer = rows[0];
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: Number(offer.id),
+        enquiryId: Number(offer.enquiry_id),
+        offeredByUserId: Number(offer.offered_by_user_id),
+        parentOfferId: offer.parent_offer_id === null
+          ? null
+          : Number(offer.parent_offer_id),
+        amount: offer.amount === null
+          ? null
+          : Number(offer.amount),
+        currencyCode: offer.currency_code,
+        rateUnit: offer.rate_unit,
+        charterDays: offer.charter_days === null
+          ? null
+          : Number(offer.charter_days),
+        terms: offer.terms,
+        status: offer.status,
+        expiresAt: offer.expires_at,
+        createdAt: offer.created_at,
+        updatedAt: offer.updated_at
+      },
+      message: "Charter offer created successfully"
+    });
+  } catch (error) {
+    logger.error(
+      { err: error },
+      "Charter offer creation API error"
+    );
+
+    return res.status(500).json({
+      success: false,
+      error: "Unable to create charter offer"
+    });
+  }
+});
+
 module.exports = router;

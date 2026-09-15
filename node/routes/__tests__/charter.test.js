@@ -428,4 +428,98 @@ describe("Charter routes", () => {
     expect(pool.query).toHaveBeenCalledTimes(1);
   });
 
+
+  test("POST /api/charter/enquiries/:id/offers rejects a non-owner", async () => {
+    mockUserId = 7;
+
+    pool.query.mockResolvedValueOnce([[
+      {
+        id: 3,
+        requester_user_id: 7,
+        status: "submitted",
+        listed_by_user_id: 12
+      }
+    ]]);
+
+    const response = await request(app)
+      .post("/api/charter/enquiries/3/offers")
+      .send({
+        amount: 125000,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 20,
+        terms: "Attempted unauthorized offer.",
+        expiresAt: "2026-10-01T12:00:00Z"
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error)
+      .toBe("Only the listing owner can make the initial offer");
+
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+
+  test("POST /api/charter/enquiries/:id/offers creates an initial offer", async () => {
+    mockUserId = 12;
+
+    pool.query
+      .mockResolvedValueOnce([[
+        {
+          id: 3,
+          requester_user_id: 7,
+          status: "submitted",
+          listed_by_user_id: 12
+        }
+      ]])
+      .mockResolvedValueOnce([{ insertId: 8 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[
+        {
+          id: 8,
+          enquiry_id: 3,
+          offered_by_user_id: 12,
+          parent_offer_id: null,
+          amount: "125000.00",
+          currency_code: "USD",
+          rate_unit: "per_voyage",
+          charter_days: 20,
+          terms: "Worldscale terms subject to final fixture.",
+          status: "pending",
+          expires_at: "2026-10-01 12:00:00",
+          created_at: "2026-09-15 12:00:00",
+          updated_at: "2026-09-15 12:00:00"
+        }
+      ]]);
+
+    const response = await request(app)
+      .post("/api/charter/enquiries/3/offers")
+      .send({
+        amount: 125000,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 20,
+        terms: "Worldscale terms subject to final fixture.",
+        expiresAt: "2026-10-01T12:00:00Z"
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({
+      id: 8,
+      enquiryId: 3,
+      offeredByUserId: 12,
+      parentOfferId: null,
+      amount: 125000,
+      currencyCode: "USD",
+      rateUnit: "per_voyage",
+      charterDays: 20,
+      terms: "Worldscale terms subject to final fixture.",
+      status: "pending"
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(4);
+  });
+
 });
