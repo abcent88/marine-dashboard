@@ -20,7 +20,8 @@ const REQUIRED_TABLES = [
   "daily_metrics",
   "audit_logs",
   "schema_migrations",
-  "sessions"
+  "sessions",
+  "vessel_marketplace_listings"
 ];
 
 const REQUIRED_COLUMNS = {
@@ -83,6 +84,28 @@ const REQUIRED_COLUMNS = {
     "session_id",
     "expires_at",
     "data"
+  ],
+
+  vessel_marketplace_listings: [
+    "id",
+    "vessel_id",
+    "listed_by_user_id",
+    "title",
+    "description",
+    "charter_type",
+    "cargo_type",
+    "availability_status",
+    "available_from",
+    "available_until",
+    "minimum_charter_days",
+    "maximum_charter_days",
+    "indicative_rate",
+    "rate_unit",
+    "currency_code",
+    "verification_status",
+    "listing_status",
+    "created_at",
+    "updated_at"
   ]
 };
 

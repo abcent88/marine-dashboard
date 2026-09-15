@@ -7,6 +7,7 @@ const session = require("express-session");
 const { Server } = require("socket.io");
 const dashboardRoutes = require("./routes/dashboard");
 const vesselRoutes = require("./routes/vessels");
+const marketplaceRoutes = require("./routes/marketplace");
 const voyageRoutes = require("./routes/voyages");
 const fuelRoutes = require("./routes/fuel");
 const maintenanceRoutes = require("./routes/maintenance");
@@ -71,6 +72,7 @@ app.use(express.static(require("path").resolve(__dirname, "..")));
  */
 app.use("/api/dashboard", requireAuth, dashboardRoutes);
 app.use("/api/vessels", requireAuth, vesselRoutes);
+app.use("/api/marketplace", requireAuth, marketplaceRoutes);
 app.use("/api/voyages", requireAuth, voyageRoutes);
 app.use("/api/fuel", requireAuth, fuelRoutes);
 app.use("/api/maintenance", requireAuth, maintenanceRoutes);
