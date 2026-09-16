@@ -152,6 +152,155 @@ router.get("/enquiries", async (req, res) => {
 });
 
 /*
+ * GET /api/charter/incoming-enquiries
+ *
+ * List charter enquiries submitted against marketplace listings
+ * owned by the logged-in user.
+ */
+router.get("/incoming-enquiries", async (req, res) => {
+  try {
+    const status = req.query.status == null
+      ? null
+      : String(req.query.status).trim() || null;
+
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 20);
+
+    const validStatuses = [
+      "submitted",
+      "under_review",
+      "offer_made",
+      "negotiating",
+      "accepted",
+      "rejected",
+      "withdrawn",
+      "closed"
+    ];
+
+    if (status !== null && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid enquiry status"
+      });
+    }
+
+    if (!Number.isInteger(page) || page <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "page must be a positive integer"
+      });
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "limit must be between 1 and 100"
+      });
+    }
+
+    const offset = (page - 1) * limit;
+    const params = [req.session.user.id];
+
+    let where = "WHERE l.listed_by_user_id = ?";
+
+    if (status !== null) {
+      where += " AND e.status = ?";
+      params.push(status);
+    }
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM charter_enquiries e
+       INNER JOIN vessel_marketplace_listings l
+         ON l.id = e.listing_id
+       ${where}`,
+      params
+    );
+
+    const [rows] = await pool.query(
+      `
+        SELECT
+          e.id,
+          e.listing_id,
+          e.requester_user_id,
+          e.cargo_type,
+          e.cargo_quantity_tons,
+          e.origin_port_id,
+          e.destination_port_id,
+          DATE_FORMAT(e.requested_start_date, '%Y-%m-%d')
+            AS requested_start_date,
+          DATE_FORMAT(e.requested_end_date, '%Y-%m-%d')
+            AS requested_end_date,
+          e.message,
+          e.status,
+          e.created_at,
+          e.updated_at,
+          l.title AS listing_title,
+          l.charter_type,
+          v.vessel_code,
+          v.name AS vessel_name
+        FROM charter_enquiries e
+        INNER JOIN vessel_marketplace_listings l
+          ON l.id = e.listing_id
+        INNER JOIN vessels v
+          ON v.id = l.vessel_id
+        ${where}
+        ORDER BY e.created_at DESC, e.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, limit, offset]
+    );
+
+    const total = Number(countRows[0].total);
+
+    return res.json({
+      success: true,
+      data: rows.map((enquiry) => ({
+        id: Number(enquiry.id),
+        listingId: Number(enquiry.listing_id),
+        requesterUserId: Number(enquiry.requester_user_id),
+        cargoType: enquiry.cargo_type,
+        cargoQuantityTons: enquiry.cargo_quantity_tons === null
+          ? null
+          : Number(enquiry.cargo_quantity_tons),
+        originPortId: enquiry.origin_port_id === null
+          ? null
+          : Number(enquiry.origin_port_id),
+        destinationPortId: enquiry.destination_port_id === null
+          ? null
+          : Number(enquiry.destination_port_id),
+        requestedStartDate: enquiry.requested_start_date,
+        requestedEndDate: enquiry.requested_end_date,
+        message: enquiry.message,
+        status: enquiry.status,
+        listingTitle: enquiry.listing_title,
+        charterType: enquiry.charter_type,
+        vesselCode: enquiry.vessel_code,
+        vesselName: enquiry.vessel_name,
+        createdAt: enquiry.created_at,
+        updatedAt: enquiry.updated_at
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error(
+      { err: error },
+      "Incoming charter enquiry listing API error"
+    );
+
+    return res.status(500).json({
+      success: false,
+      error: "Unable to retrieve incoming charter enquiries"
+    });
+  }
+});
+
+/*
  * GET /api/charter/enquiries/:id
  *
  * Retrieve a charter enquiry when the logged-in user is either

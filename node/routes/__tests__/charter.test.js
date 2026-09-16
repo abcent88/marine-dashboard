@@ -522,4 +522,195 @@ describe("Charter routes", () => {
     expect(pool.query).toHaveBeenCalledTimes(4);
   });
 
+  test("GET /api/charter/incoming-enquiries returns enquiries for listings owned by the logged-in user", async () => {
+    mockUserId = 12;
+
+    pool.query
+      .mockResolvedValueOnce([[{ total: 1 }]])
+      .mockResolvedValueOnce([[
+        {
+          id: 3,
+          listing_id: 25,
+          requester_user_id: 7,
+          cargo_type: "Crude Oil",
+          cargo_quantity_tons: "50000.00",
+          origin_port_id: 10,
+          destination_port_id: 20,
+          requested_start_date: "2026-10-01",
+          requested_end_date: "2026-10-20",
+          message: "Please provide your best voyage charter terms.",
+          status: "submitted",
+          created_at: "2026-09-15 12:00:00",
+          updated_at: "2026-09-15 12:00:00",
+          listing_title: "Ocean Pioneer Voyage Charter",
+          charter_type: "voyage_charter",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]]);
+
+    const response = await request(app)
+      .get("/api/charter/incoming-enquiries");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0]).toMatchObject({
+      id: 3,
+      listingId: 25,
+      requesterUserId: 7,
+      cargoType: "Crude Oil",
+      cargoQuantityTons: 50000,
+      originPortId: 10,
+      destinationPortId: 20,
+      requestedStartDate: "2026-10-01",
+      requestedEndDate: "2026-10-20",
+      message: "Please provide your best voyage charter terms.",
+      status: "submitted",
+      listingTitle: "Ocean Pioneer Voyage Charter",
+      charterType: "voyage_charter",
+      vesselCode: "MD-001",
+      vesselName: "Ocean Pioneer"
+    });
+    expect(response.body.pagination).toMatchObject({
+      page: 1,
+      limit: 20,
+      total: 1,
+      totalPages: 1
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(pool.query.mock.calls[0][0]).toContain(
+      "l.listed_by_user_id = ?"
+    );
+    expect(pool.query.mock.calls[0][1]).toEqual([12]);
+    expect(pool.query.mock.calls[1][1]).toEqual([12, 20, 0]);
+    });
+
+
+  test("GET /api/charter/incoming-enquiries applies status and pagination filters", async () => {
+    mockUserId = 12;
+
+    pool.query
+      .mockResolvedValueOnce([[{ total: 3 }]])
+      .mockResolvedValueOnce([[
+        {
+          id: 5,
+          listing_id: 25,
+          requester_user_id: 8,
+          cargo_type: "Diesel",
+          cargo_quantity_tons: "12000.00",
+          origin_port_id: null,
+          destination_port_id: null,
+          requested_start_date: null,
+          requested_end_date: null,
+          message: "Looking for time charter terms.",
+          status: "offer_made",
+          created_at: "2026-09-15 13:00:00",
+          updated_at: "2026-09-15 13:30:00",
+          listing_title: "Ocean Pioneer Time Charter",
+          charter_type: "time_charter",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]]);
+
+    const response = await request(app)
+      .get("/api/charter/incoming-enquiries")
+      .query({
+        status: "offer_made",
+        page: 2,
+        limit: 1
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0]).toMatchObject({
+      id: 5,
+      status: "offer_made",
+      cargoType: "Diesel",
+      cargoQuantityTons: 12000
+    });
+    expect(response.body.pagination).toMatchObject({
+      page: 2,
+      limit: 1,
+      total: 3,
+      totalPages: 3
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(pool.query.mock.calls[0][0]).toContain(
+      "l.listed_by_user_id = ?"
+    );
+    expect(pool.query.mock.calls[0][0]).toContain(
+      "e.status = ?"
+    );
+    expect(pool.query.mock.calls[0][1]).toEqual([12, "offer_made"]);
+    expect(pool.query.mock.calls[1][1]).toEqual([
+      12,
+      "offer_made",
+      1,
+      1
+    ]);
+    });
+
+
+  test("GET /api/charter/incoming-enquiries rejects an invalid status", async () => {
+    mockUserId = 12;
+
+    const response = await request(app)
+      .get("/api/charter/incoming-enquiries")
+      .query({
+        status: "invalid_status"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe("Invalid enquiry status");
+
+    expect(pool.query).not.toHaveBeenCalled();
+    });
+
+
+  test("GET /api/charter/incoming-enquiries rejects an invalid page", async () => {
+    mockUserId = 12;
+
+    const response = await request(app)
+      .get("/api/charter/incoming-enquiries")
+      .query({
+        page: 0
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "page must be a positive integer"
+    );
+
+    expect(pool.query).not.toHaveBeenCalled();
+    });
+
+
+  test("GET /api/charter/incoming-enquiries rejects an invalid limit", async () => {
+    mockUserId = 12;
+
+    const response = await request(app)
+      .get("/api/charter/incoming-enquiries")
+      .query({
+        limit: 101
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "limit must be between 1 and 100"
+    );
+
+    expect(pool.query).not.toHaveBeenCalled();
+    });
+
+
+
+
 });
