@@ -2512,6 +2512,67 @@ select{
   font-size: 0.82rem;
 }
 
+.marketplace-subhead {
+  margin-top: 20px;
+}
+
+.marketplace-incoming-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.marketplace-incoming-filter select {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: inherit;
+}
+
+.marketplace-incoming-enquiry {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.marketplace-incoming-enquiry .marketplace-enquiry-header {
+  align-items: flex-start;
+}
+
+.marketplace-incoming-enquiry .marketplace-enquiry-details {
+  margin-top: 2px;
+}
+
+.marketplace-enquiry-message {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.marketplace-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.marketplace-pagination .btn {
+  width: auto;
+  margin-top: 0;
+}
+
+.marketplace-pagination .muted {
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .marketplace-enquiry-form {
   margin-top: 20px;
   padding: 18px;
@@ -2595,6 +2656,20 @@ select{
 }
 
 @media (max-width: 700px) {
+  .marketplace-incoming-filter {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .marketplace-incoming-filter select {
+    width: 100%;
+  }
+
+  .marketplace-pagination {
+    flex-wrap: wrap;
+  }
+
   .marketplace-filters,
   .marketplace-listings-grid,
   .marketplace-form-grid {

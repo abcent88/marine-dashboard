@@ -4,10 +4,17 @@
   const state = {
     listings: [],
     enquiries: [],
+    incomingEnquiries: [],
     page: 1,
     limit: 20,
+    incomingPage: 1,
+    incomingLimit: 20,
+    incomingTotal: 0,
+    incomingTotalPages: 0,
+    incomingStatus: "",
     loadingListings: false,
-    loadingEnquiries: false
+    loadingEnquiries: false,
+    loadingIncomingEnquiries: false
   };
 
   function formatLabel(value) {
@@ -370,6 +377,232 @@
     }
   }
 
+  async function loadIncomingCharterEnquiries() {
+    if (state.loadingIncomingEnquiries) return;
+
+    const body = $("incomingCharterEnquiriesBody");
+
+    state.loadingIncomingEnquiries = true;
+
+    if (body) {
+      body.innerHTML = `
+        <div class="marketplace-empty muted">
+          Loading incoming charter enquiries...
+        </div>
+      `;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        page: String(state.incomingPage),
+        limit: String(state.incomingLimit)
+      });
+
+      if (state.incomingStatus) {
+        params.set("status", state.incomingStatus);
+      }
+
+      const response = await fetch(
+        `${API_BASE}/api/charter/incoming-enquiries?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Incoming charter enquiries API returned HTTP ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      if (
+        !result.success ||
+        !result.data ||
+        !Array.isArray(result.data.enquiries)
+      ) {
+        throw new Error(
+          "Invalid incoming charter enquiries API response"
+        );
+      }
+
+      state.incomingEnquiries = result.data.enquiries;
+
+      const pagination = result.data.pagination || {};
+
+      state.incomingTotal = Number(pagination.total || 0);
+      state.incomingTotalPages = Number(pagination.totalPages || 0);
+      state.incomingPage = Number(
+        pagination.page || state.incomingPage
+      );
+      state.incomingLimit = Number(
+        pagination.limit || state.incomingLimit
+      );
+
+      renderIncomingCharterEnquiries();
+
+      console.log(
+        "Incoming charter enquiries loaded:",
+        state.incomingEnquiries
+      );
+
+    } catch (error) {
+      console.error("Incoming charter enquiries error:", error);
+
+      state.incomingEnquiries = [];
+      state.incomingTotal = 0;
+      state.incomingTotalPages = 0;
+
+      const body = $("incomingCharterEnquiriesBody");
+
+      if (body) {
+        body.innerHTML = `
+          <div class="marketplace-empty muted">
+            Unable to load incoming charter enquiries.
+          </div>
+        `;
+      }
+    } finally {
+      state.loadingIncomingEnquiries = false;
+    }
+  }
+
+  function renderIncomingCharterEnquiries() {
+    const body = $("incomingCharterEnquiriesBody");
+
+    if (!body) return;
+
+    if (!state.incomingEnquiries.length) {
+      body.innerHTML = `
+        <div class="marketplace-empty muted">
+          No incoming charter enquiries for your marketplace listings.
+        </div>
+      `;
+      return;
+    }
+
+    body.innerHTML = state.incomingEnquiries.map(enquiry => `
+      <article class="marketplace-enquiry-card marketplace-incoming-enquiry">
+        <div class="marketplace-enquiry-header">
+          <div>
+            <div class="card-title">
+              ${escapeHtml(enquiry.listingTitle || "Charter enquiry")}
+            </div>
+            <div class="muted small">
+              ${escapeHtml(enquiry.vesselName || "Unknown vessel")}
+              ${enquiry.vesselCode
+                ? ` · ${escapeHtml(enquiry.vesselCode)}`
+                : ""}
+            </div>
+          </div>
+
+          <span class="badge">
+            ${escapeHtml(formatLabel(enquiry.status))}
+          </span>
+        </div>
+
+        <div class="marketplace-enquiry-details">
+          <div>
+            <span class="muted small">Requester</span>
+            <strong>
+              User #${escapeHtml(enquiry.requesterUserId)}
+            </strong>
+          </div>
+
+          <div>
+            <span class="muted small">Cargo</span>
+            <strong>
+              ${escapeHtml(enquiry.cargoType || "Not specified")}
+            </strong>
+          </div>
+
+          <div>
+            <span class="muted small">Quantity</span>
+            <strong>
+              ${enquiry.cargoQuantityTons != null
+                ? `${escapeHtml(enquiry.cargoQuantityTons)} tons`
+                : "Not specified"}
+            </strong>
+          </div>
+
+          <div>
+            <span class="muted small">Requested dates</span>
+            <strong>
+              ${formatDate(enquiry.requestedStartDate)}
+              ${enquiry.requestedEndDate
+                ? ` → ${formatDate(enquiry.requestedEndDate)}`
+                : ""}
+            </strong>
+          </div>
+
+          <div>
+            <span class="muted small">Received</span>
+            <strong>
+              ${formatDate(enquiry.createdAt)}
+            </strong>
+          </div>
+        </div>
+
+        ${
+          enquiry.message
+            ? `
+              <div class="marketplace-enquiry-message">
+                <span class="muted small">Message</span>
+                <p>${escapeHtml(enquiry.message)}</p>
+              </div>
+            `
+            : ""
+        }
+      </article>
+    `).join("");
+
+    renderIncomingPagination();
+  }
+
+  function renderIncomingPagination() {
+    const body = $("incomingCharterEnquiriesBody");
+
+    if (!body) return;
+
+    const totalPages = Number(state.incomingTotalPages || 0);
+
+    if (totalPages <= 1) return;
+
+    const pagination = document.createElement("div");
+    pagination.className = "marketplace-pagination";
+
+    pagination.innerHTML = `
+      <button
+        type="button"
+        class="btn secondary"
+        id="incomingCharterPrevious"
+        ${state.incomingPage <= 1 ? "disabled" : ""}
+      >
+        Previous
+      </button>
+
+      <span class="muted small">
+        Page ${state.incomingPage} of ${totalPages}
+        · ${state.incomingTotal} total
+      </span>
+
+      <button
+        type="button"
+        class="btn secondary"
+        id="incomingCharterNext"
+        ${state.incomingPage >= totalPages ? "disabled" : ""}
+      >
+        Next
+      </button>
+    `;
+
+    body.appendChild(pagination);
+  }
+
   function renderCharterEnquiries() {
     const body = $("charterEnquiriesBody");
 
@@ -700,18 +933,48 @@
         );
       }
     });
+
+    const incomingStatus = $("incomingCharterStatus");
+    if (incomingStatus) {
+      incomingStatus.addEventListener("change", () => {
+        state.incomingStatus = incomingStatus.value;
+        state.incomingPage = 1;
+        loadIncomingCharterEnquiries();
+      });
+    }
+
+    const incomingBody = $("incomingCharterEnquiriesBody");
+    if (incomingBody) {
+      incomingBody.addEventListener("click", event => {
+        const previousButton = event.target.closest("#incomingCharterPrevious");
+        const nextButton = event.target.closest("#incomingCharterNext");
+
+        if (previousButton && state.incomingPage > 1) {
+          state.incomingPage -= 1;
+          loadIncomingCharterEnquiries();
+          return;
+        }
+
+        if (nextButton && state.incomingPage < state.incomingTotalPages) {
+          state.incomingPage += 1;
+          loadIncomingCharterEnquiries();
+        }
+      });
+    }
   }
 
   function initMarketplace() {
     bindMarketplaceEvents();
     loadMarketplaceListings();
     loadCharterEnquiries();
+    loadIncomingCharterEnquiries();
   }
 
   window.MarineMarketplace = {
     init: initMarketplace,
     loadListings: loadMarketplaceListings,
     loadEnquiries: loadCharterEnquiries,
+    loadIncomingEnquiries: loadIncomingCharterEnquiries,
     openEnquiryForm,
     closeEnquiryForm
   };
