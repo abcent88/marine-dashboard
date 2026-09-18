@@ -757,5 +757,409 @@ describe("Marketplace routes", () => {
     );
 
     expect(pool.query).toHaveBeenCalledTimes(2);
+    });
+
+  test("PATCH /listings/:id/suspend suspends a verified published listing", async () => {
+    pool.query
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          listed_by_user_id: 1,
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          verification_status: "verified",
+          listing_status: "published",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer",
+          vessel_type: "fishing",
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          description: "Available for fishing charter.",
+          charter_type: "voyage_charter",
+          cargo_type: "fish",
+          availability_status: "available",
+          available_from: "2026-10-01",
+          available_until: "2026-12-31",
+          minimum_charter_days: 10,
+          maximum_charter_days: 45,
+          indicative_rate: "25000.00",
+          rate_unit: "per_day",
+          currency_code: "USD",
+          verification_status: "verified",
+          listing_status: "suspended",
+          created_at: "2026-09-18T21:00:00.000Z",
+          updated_at: "2026-09-18T22:00:00.000Z"
+        }
+      ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/suspend");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.message).toBe(
+      "Marketplace listing suspended successfully"
+    );
+
+    expect(response.body.data).toEqual({
+      id: 1,
+      vesselId: 1,
+      vesselCode: "MD-001",
+      vesselName: "Ocean Pioneer",
+      vesselType: "fishing",
+      title: "Ocean Pioneer Fishing Vessel Charter",
+      description: "Available for fishing charter.",
+      charterType: "voyage_charter",
+      cargoType: "fish",
+      availabilityStatus: "available",
+      availableFrom: "2026-10-01",
+      availableUntil: "2026-12-31",
+      minimumCharterDays: 10,
+      maximumCharterDays: 45,
+      indicativeRate: 25000,
+      rateUnit: "per_day",
+      currencyCode: "USD",
+      verificationStatus: "verified",
+      listingStatus: "suspended",
+      createdAt: "2026-09-18T21:00:00.000Z",
+      updatedAt: "2026-09-18T22:00:00.000Z"
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(4);
+
+    expect(pool.query.mock.calls[1][1]).toEqual([1]);
+
+    expect(pool.query.mock.calls[2][1]).toEqual([
+      1,
+      "suspend_marketplace_listing",
+      "marketplace_listing",
+      1,
+      expect.any(String),
+      expect.any(String)
+    ]);
+
+    expect(pool.query.mock.calls[2][0]).toContain(
+      "INSERT INTO audit_logs"
+    );
+  });
+
+  test("PATCH /listings/:id/suspend returns 409 when the listing is not verified", async () => {
+    pool.query.mockResolvedValueOnce([[
+      {
+        id: 1,
+        vessel_id: 1,
+        listed_by_user_id: 1,
+        title: "Unverified Listing",
+        verification_status: "pending",
+        listing_status: "published",
+        vessel_code: "MD-001",
+        vessel_name: "Ocean Pioneer"
+      }
+    ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/suspend");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Only verified marketplace listings can be suspended"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/suspend returns 409 for a listing that is not published", async () => {
+    pool.query.mockResolvedValueOnce([[
+      {
+        id: 1,
+        vessel_id: 1,
+        listed_by_user_id: 1,
+        title: "Draft Listing",
+        verification_status: "verified",
+        listing_status: "draft",
+        vessel_code: "MD-001",
+        vessel_name: "Ocean Pioneer"
+      }
+    ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/suspend");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing is draft, not published"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/suspend returns 404 for a missing listing", async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/999/suspend");
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing not found"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/suspend returns 500 when the database fails", async () => {
+    const dbError = new Error("database failure");
+    pool.query.mockRejectedValueOnce(dbError);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/suspend");
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Unable to suspend marketplace listing"
+    );
+
+    const logger = require("../../lib/logger");
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  test("PATCH /listings/:id/suspend returns 409 when the published state changes before suspension", async () => {
+    pool.query
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          listed_by_user_id: 1,
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          verification_status: "verified",
+          listing_status: "published",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]])
+      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/suspend");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing state changed before suspension completed"
+    );
+
+    expect(pool.query).toHaveBeenCalledTimes(2);
+  });
+
+  test("PATCH /listings/:id/resume resumes a verified suspended listing", async () => {
+    pool.query
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          listed_by_user_id: 1,
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          verification_status: "verified",
+          listing_status: "suspended",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer",
+          vessel_type: "fishing",
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          description: "Available for fishing charter.",
+          charter_type: "voyage_charter",
+          cargo_type: "fish",
+          availability_status: "available",
+          available_from: "2026-10-01",
+          available_until: "2026-12-31",
+          minimum_charter_days: 10,
+          maximum_charter_days: 45,
+          indicative_rate: "25000.00",
+          rate_unit: "per_day",
+          currency_code: "USD",
+          verification_status: "verified",
+          listing_status: "published",
+          created_at: "2026-09-18T21:00:00.000Z",
+          updated_at: "2026-09-18T22:00:00.000Z"
+        }
+      ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/resume");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.message).toBe(
+      "Marketplace listing resumed successfully"
+    );
+
+    expect(response.body.data).toEqual({
+      id: 1,
+      vesselId: 1,
+      vesselCode: "MD-001",
+      vesselName: "Ocean Pioneer",
+      vesselType: "fishing",
+      title: "Ocean Pioneer Fishing Vessel Charter",
+      description: "Available for fishing charter.",
+      charterType: "voyage_charter",
+      cargoType: "fish",
+      availabilityStatus: "available",
+      availableFrom: "2026-10-01",
+      availableUntil: "2026-12-31",
+      minimumCharterDays: 10,
+      maximumCharterDays: 45,
+      indicativeRate: 25000,
+      rateUnit: "per_day",
+      currencyCode: "USD",
+      verificationStatus: "verified",
+      listingStatus: "published",
+      createdAt: "2026-09-18T21:00:00.000Z",
+      updatedAt: "2026-09-18T22:00:00.000Z"
+    });
+
+    expect(pool.query).toHaveBeenCalledTimes(4);
+
+    expect(pool.query.mock.calls[1][1]).toEqual([1]);
+
+    expect(pool.query.mock.calls[2][1]).toEqual([
+      1,
+      "resume_marketplace_listing",
+      "marketplace_listing",
+      1,
+      expect.any(String),
+      expect.any(String)
+    ]);
+
+    expect(pool.query.mock.calls[2][0]).toContain(
+      "INSERT INTO audit_logs"
+    );
+  });
+
+  test("PATCH /listings/:id/resume returns 409 when the listing is not verified", async () => {
+    pool.query.mockResolvedValueOnce([[
+      {
+        id: 1,
+        vessel_id: 1,
+        listed_by_user_id: 1,
+        title: "Unverified Listing",
+        verification_status: "pending",
+        listing_status: "suspended",
+        vessel_code: "MD-001",
+        vessel_name: "Ocean Pioneer"
+      }
+    ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/resume");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Only verified marketplace listings can be resumed"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/resume returns 409 for a listing that is not suspended", async () => {
+    pool.query.mockResolvedValueOnce([[
+      {
+        id: 1,
+        vessel_id: 1,
+        listed_by_user_id: 1,
+        title: "Published Listing",
+        verification_status: "verified",
+        listing_status: "published",
+        vessel_code: "MD-001",
+        vessel_name: "Ocean Pioneer"
+      }
+    ]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/resume");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing is published, not suspended"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/resume returns 404 for a missing listing", async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/999/resume");
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing not found"
+    );
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH /listings/:id/resume returns 500 when the database fails", async () => {
+    const dbError = new Error("database failure");
+    pool.query.mockRejectedValueOnce(dbError);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/resume");
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Unable to resume marketplace listing"
+    );
+
+    const logger = require("../../lib/logger");
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  test("PATCH /listings/:id/resume returns 409 when the suspended state changes before resumption", async () => {
+    pool.query
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          vessel_id: 1,
+          listed_by_user_id: 1,
+          title: "Ocean Pioneer Fishing Vessel Charter",
+          verification_status: "verified",
+          listing_status: "suspended",
+          vessel_code: "MD-001",
+          vessel_name: "Ocean Pioneer"
+        }
+      ]])
+      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    const response = await request(app)
+      .patch("/api/marketplace/listings/1/resume");
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Marketplace listing state changed before resumption completed"
+    );
+
+    expect(pool.query).toHaveBeenCalledTimes(2);
   });
 });

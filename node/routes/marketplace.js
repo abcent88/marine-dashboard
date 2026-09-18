@@ -904,4 +904,389 @@ router.patch(
   }
 );
 
+
+  /*
+   * PATCH /api/marketplace/listings/:id/suspend
+   *
+   * Suspends a verified published marketplace listing.
+   * Suspension does not change verification or availability status.
+   */
+  router.patch(
+    "/listings/:id/suspend",
+    requireRole("super_admin", "admin"),
+    async (req, res) => {
+      try {
+        const listingId = Number(req.params.id);
+
+        if(!Number.isInteger(listingId) || listingId <= 0){
+          return res.status(400).json({
+            success: false,
+            error: "Invalid marketplace listing ID"
+          });
+        }
+
+        const [rows] = await pool.query(
+          `
+            SELECT
+              l.id,
+              l.vessel_id,
+              l.listed_by_user_id,
+              l.title,
+              l.verification_status,
+              l.listing_status,
+              v.vessel_code,
+              v.name AS vessel_name
+            FROM vessel_marketplace_listings l
+            INNER JOIN vessels v
+              ON v.id = l.vessel_id
+            WHERE l.id = ?
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        if(rows.length === 0){
+          return res.status(404).json({
+            success: false,
+            error: "Marketplace listing not found"
+          });
+        }
+
+        const listing = rows[0];
+
+        if(listing.verification_status !== "verified"){
+          return res.status(409).json({
+            success: false,
+            error: "Only verified marketplace listings can be suspended"
+          });
+        }
+
+        if(listing.listing_status !== "published"){
+          return res.status(409).json({
+            success: false,
+            error: `Marketplace listing is ${listing.listing_status}, not published`
+          });
+        }
+
+        const [updateResult] = await pool.query(
+          `
+            UPDATE vessel_marketplace_listings
+            SET listing_status = 'suspended'
+            WHERE id = ?
+              AND verification_status = 'verified'
+              AND listing_status = 'published'
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        if(updateResult.affectedRows !== 1){
+          return res.status(409).json({
+            success: false,
+            error: "Marketplace listing state changed before suspension completed"
+          });
+        }
+
+        await pool.query(
+          `
+            INSERT INTO audit_logs
+              (user_id, action, entity_type, entity_id, details, ip_address)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `,
+          [
+            req.session.user.id,
+            "suspend_marketplace_listing",
+            "marketplace_listing",
+            listingId,
+            JSON.stringify({
+              listingId,
+              vesselId: Number(listing.vessel_id),
+              vesselCode: listing.vessel_code,
+              vesselName: listing.vessel_name,
+              title: listing.title,
+              before: {
+                verificationStatus: listing.verification_status,
+                listingStatus: listing.listing_status
+              },
+              after: {
+                verificationStatus: listing.verification_status,
+                listingStatus: "suspended"
+              }
+            }),
+            req.ip || null
+          ]
+        );
+
+        const [updatedRows] = await pool.query(
+          `
+            SELECT
+              l.id,
+              l.vessel_id,
+              v.vessel_code,
+              v.name AS vessel_name,
+              v.vessel_type,
+              l.title,
+              l.description,
+              l.charter_type,
+              l.cargo_type,
+              l.availability_status,
+              DATE_FORMAT(l.available_from, '%Y-%m-%d') AS available_from,
+              DATE_FORMAT(l.available_until, '%Y-%m-%d') AS available_until,
+              l.minimum_charter_days,
+              l.maximum_charter_days,
+              l.indicative_rate,
+              l.rate_unit,
+              l.currency_code,
+              l.verification_status,
+              l.listing_status,
+              l.created_at,
+              l.updated_at
+            FROM vessel_marketplace_listings l
+            INNER JOIN vessels v
+              ON v.id = l.vessel_id
+            WHERE l.id = ?
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        const updatedListing = updatedRows[0];
+
+        return res.json({
+          success: true,
+          message: "Marketplace listing suspended successfully",
+          data: {
+            id: Number(updatedListing.id),
+            vesselId: Number(updatedListing.vessel_id),
+            vesselCode: updatedListing.vessel_code,
+            vesselName: updatedListing.vessel_name,
+            vesselType: updatedListing.vessel_type,
+            title: updatedListing.title,
+            description: updatedListing.description,
+            charterType: updatedListing.charter_type,
+            cargoType: updatedListing.cargo_type,
+            availabilityStatus: updatedListing.availability_status,
+            availableFrom: updatedListing.available_from,
+            availableUntil: updatedListing.available_until,
+            minimumCharterDays: updatedListing.minimum_charter_days,
+            maximumCharterDays: updatedListing.maximum_charter_days,
+            indicativeRate: updatedListing.indicative_rate === null
+              ? null
+              : Number(updatedListing.indicative_rate),
+            rateUnit: updatedListing.rate_unit,
+            currencyCode: updatedListing.currency_code,
+            verificationStatus: updatedListing.verification_status,
+            listingStatus: updatedListing.listing_status,
+            createdAt: updatedListing.created_at,
+            updatedAt: updatedListing.updated_at
+          }
+        });
+
+      } catch(error){
+        logger.error(
+          { err: error },
+          "Marketplace listing suspension API error"
+        );
+
+        return res.status(500).json({
+          success: false,
+          error: "Unable to suspend marketplace listing"
+        });
+      }
+    }
+  );
+
+
+  /*
+   * PATCH /api/marketplace/listings/:id/resume
+   *
+   * Resumes a verified suspended marketplace listing.
+   * Resumption does not change verification or availability status.
+   */
+  router.patch(
+    "/listings/:id/resume",
+    requireRole("super_admin", "admin"),
+    async (req, res) => {
+      try {
+        const listingId = Number(req.params.id);
+
+        if(!Number.isInteger(listingId) || listingId <= 0){
+          return res.status(400).json({
+            success: false,
+            error: "Invalid marketplace listing ID"
+          });
+        }
+
+        const [rows] = await pool.query(
+          `
+            SELECT
+              l.id,
+              l.vessel_id,
+              l.listed_by_user_id,
+              l.title,
+              l.verification_status,
+              l.listing_status,
+              v.vessel_code,
+              v.name AS vessel_name
+            FROM vessel_marketplace_listings l
+            INNER JOIN vessels v
+              ON v.id = l.vessel_id
+            WHERE l.id = ?
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        if(rows.length === 0){
+          return res.status(404).json({
+            success: false,
+            error: "Marketplace listing not found"
+          });
+        }
+
+        const listing = rows[0];
+
+        if(listing.verification_status !== "verified"){
+          return res.status(409).json({
+            success: false,
+            error: "Only verified marketplace listings can be resumed"
+          });
+        }
+
+        if(listing.listing_status !== "suspended"){
+          return res.status(409).json({
+            success: false,
+            error: `Marketplace listing is ${listing.listing_status}, not suspended`
+          });
+        }
+
+        const [updateResult] = await pool.query(
+          `
+            UPDATE vessel_marketplace_listings
+            SET listing_status = 'published'
+            WHERE id = ?
+              AND verification_status = 'verified'
+              AND listing_status = 'suspended'
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        if(updateResult.affectedRows !== 1){
+          return res.status(409).json({
+            success: false,
+            error: "Marketplace listing state changed before resumption completed"
+          });
+        }
+
+        await pool.query(
+          `
+            INSERT INTO audit_logs
+              (user_id, action, entity_type, entity_id, details, ip_address)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `,
+          [
+            req.session.user.id,
+            "resume_marketplace_listing",
+            "marketplace_listing",
+            listingId,
+            JSON.stringify({
+              listingId,
+              vesselId: Number(listing.vessel_id),
+              vesselCode: listing.vessel_code,
+              vesselName: listing.vessel_name,
+              title: listing.title,
+              before: {
+                verificationStatus: listing.verification_status,
+                listingStatus: listing.listing_status
+              },
+              after: {
+                verificationStatus: listing.verification_status,
+                listingStatus: "published"
+              }
+            }),
+            req.ip || null
+          ]
+        );
+
+        const [updatedRows] = await pool.query(
+          `
+            SELECT
+              l.id,
+              l.vessel_id,
+              v.vessel_code,
+              v.name AS vessel_name,
+              v.vessel_type,
+              l.title,
+              l.description,
+              l.charter_type,
+              l.cargo_type,
+              l.availability_status,
+              DATE_FORMAT(l.available_from, '%Y-%m-%d') AS available_from,
+              DATE_FORMAT(l.available_until, '%Y-%m-%d') AS available_until,
+              l.minimum_charter_days,
+              l.maximum_charter_days,
+              l.indicative_rate,
+              l.rate_unit,
+              l.currency_code,
+              l.verification_status,
+              l.listing_status,
+              l.created_at,
+              l.updated_at
+            FROM vessel_marketplace_listings l
+            INNER JOIN vessels v
+              ON v.id = l.vessel_id
+            WHERE l.id = ?
+            LIMIT 1
+          `,
+          [listingId]
+        );
+
+        const updatedListing = updatedRows[0];
+
+        return res.json({
+          success: true,
+          message: "Marketplace listing resumed successfully",
+          data: {
+            id: Number(updatedListing.id),
+            vesselId: Number(updatedListing.vessel_id),
+            vesselCode: updatedListing.vessel_code,
+            vesselName: updatedListing.vessel_name,
+            vesselType: updatedListing.vessel_type,
+            title: updatedListing.title,
+            description: updatedListing.description,
+            charterType: updatedListing.charter_type,
+            cargoType: updatedListing.cargo_type,
+            availabilityStatus: updatedListing.availability_status,
+            availableFrom: updatedListing.available_from,
+            availableUntil: updatedListing.available_until,
+            minimumCharterDays: updatedListing.minimum_charter_days,
+            maximumCharterDays: updatedListing.maximum_charter_days,
+            indicativeRate: updatedListing.indicative_rate === null
+              ? null
+              : Number(updatedListing.indicative_rate),
+            rateUnit: updatedListing.rate_unit,
+            currencyCode: updatedListing.currency_code,
+            verificationStatus: updatedListing.verification_status,
+            listingStatus: updatedListing.listing_status,
+            createdAt: updatedListing.created_at,
+            updatedAt: updatedListing.updated_at
+          }
+        });
+
+      } catch(error){
+        logger.error(
+          { err: error },
+          "Marketplace listing resumption API error"
+        );
+
+        return res.status(500).json({
+          success: false,
+          error: "Unable to resume marketplace listing"
+        });
+      }
+    }
+  );
+
+
 module.exports = router;
