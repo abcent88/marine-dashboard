@@ -155,6 +155,103 @@ router.get("/vessels", async (req, res) => {
 });
 
 /*
+ * GET /api/marketplace/listings
+ *
+ * Returns marketplace listings for admin management.
+ * Unlike /vessels, this includes all listing and verification states.
+ */
+router.get(
+  "/listings",
+  requireRole("super_admin", "admin"),
+  async (req, res) => {
+    try {
+      const [rows] = await pool.query(`
+        SELECT
+          l.id,
+          l.vessel_id,
+          v.vessel_code,
+          v.name AS vessel_name,
+          v.vessel_type,
+          v.flag_country,
+          v.imo_number,
+          v.capacity_tons,
+          l.title,
+          l.description,
+          l.charter_type,
+          l.cargo_type,
+          l.availability_status,
+          DATE_FORMAT(l.available_from, '%Y-%m-%d') AS available_from,
+          DATE_FORMAT(l.available_until, '%Y-%m-%d') AS available_until,
+          l.minimum_charter_days,
+          l.maximum_charter_days,
+          l.indicative_rate,
+          l.rate_unit,
+          l.currency_code,
+          l.verification_status,
+          l.listing_status,
+          l.listed_by_user_id,
+          l.created_at,
+          l.updated_at
+        FROM vessel_marketplace_listings l
+        INNER JOIN vessels v
+          ON v.id = l.vessel_id
+        ORDER BY l.updated_at DESC, l.id DESC
+      `);
+
+      const listings = rows.map((row) => ({
+        id: Number(row.id),
+        vesselId: Number(row.vessel_id),
+        vesselCode: row.vessel_code,
+        vesselName: row.vessel_name,
+        vesselType: row.vessel_type,
+        flagCountry: row.flag_country,
+        imoNumber: row.imo_number,
+        capacityTons: Number(row.capacity_tons),
+        title: row.title,
+        description: row.description,
+        charterType: row.charter_type,
+        cargoType: row.cargo_type,
+        availabilityStatus: row.availability_status,
+        availableFrom: row.available_from,
+        availableUntil: row.available_until,
+        minimumCharterDays: row.minimum_charter_days,
+        maximumCharterDays: row.maximum_charter_days,
+        indicativeRate: row.indicative_rate === null
+          ? null
+          : Number(row.indicative_rate),
+        rateUnit: row.rate_unit,
+        currencyCode: row.currency_code,
+        verificationStatus: row.verification_status,
+        listingStatus: row.listing_status,
+        listedByUserId: row.listed_by_user_id === null
+          ? null
+          : Number(row.listed_by_user_id),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+
+      return res.json({
+        success: true,
+        count: listings.length,
+        data: listings,
+        generatedAt: new Date().toISOString()
+      });
+
+    } catch(error){
+      logger.error(
+        { err: error },
+        "Marketplace listing management API error"
+      );
+
+      return res.status(500).json({
+        success: false,
+        error: "Unable to load marketplace listings"
+      });
+    }
+  }
+);
+
+/*
  * POST /api/marketplace/listings
  *
  * Creates a vessel marketplace listing.

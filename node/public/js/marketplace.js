@@ -14,7 +14,10 @@
     incomingStatus: "",
     loadingListings: false,
     loadingEnquiries: false,
-    loadingIncomingEnquiries: false
+    loadingIncomingEnquiries: false,
+    adminListings: [],
+    loadingAdminListings: false,
+    creatingAdminListing: false
   };
 
   function formatLabel(value) {
@@ -139,12 +142,12 @@
       if (
         !result.success ||
         !result.data ||
-        !Array.isArray(result.data.listings)
+        !Array.isArray(result.data)
       ) {
         throw new Error("Invalid marketplace API response");
       }
 
-      state.listings = result.data.listings;
+      state.listings = result.data;
 
       renderMarketplaceListings();
 
@@ -152,7 +155,7 @@
 
       if (count) {
         count.textContent = String(
-          result.data.count ?? state.listings.length
+          result.count ?? state.listings.length
         );
       }
 
@@ -311,6 +314,81 @@
       });
   }
 
+  async function loadCharterPorts() {
+    const originSelect = $("charterEnquiryOriginPortId");
+    const destinationSelect = $("charterEnquiryDestinationPortId");
+
+    if (!originSelect && !destinationSelect) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/ports`,
+        {
+          method: "GET",
+          headers: {
+            "Accept": "application/json"
+          },
+          credentials: "include"
+        }
+      );
+
+      const result = await response.json();
+
+      if (
+        !response.ok ||
+        !result.success ||
+        !Array.isArray(result.data)
+      ) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Ports API returned HTTP ${response.status}`
+        );
+      }
+
+      const ports = result.data;
+
+      [originSelect, destinationSelect].forEach((select) => {
+        if (!select) {
+          return;
+        }
+
+        const placeholder =
+          select.id === "charterEnquiryOriginPortId"
+            ? "Select origin port (optional)"
+            : "Select destination port (optional)";
+
+        select.innerHTML = "";
+
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = placeholder;
+        select.appendChild(defaultOption);
+
+        ports.forEach((port) => {
+          const option = document.createElement("option");
+          option.value = String(port.id);
+
+          const location = [
+            port.name,
+            port.country
+          ]
+            .filter(Boolean)
+            .join(" — ");
+
+          option.textContent =
+            location || `Port #${port.id}`;
+
+          select.appendChild(option);
+        });
+      });
+    } catch (error) {
+      console.error("Charter ports error:", error);
+    }
+  }
+
   async function loadCharterEnquiries() {
     if (state.loadingEnquiries) return;
 
@@ -347,15 +425,14 @@
 
       if (
         !result.success ||
-        !result.data ||
-        !Array.isArray(result.data.enquiries)
+        !Array.isArray(result.data)
       ) {
         throw new Error(
           "Invalid charter enquiries API response"
         );
       }
 
-      state.enquiries = result.data.enquiries;
+      state.enquiries = result.data;
 
       renderCharterEnquiries();
 
@@ -422,17 +499,16 @@
 
       if (
         !result.success ||
-        !result.data ||
-        !Array.isArray(result.data.enquiries)
+        !Array.isArray(result.data)
       ) {
         throw new Error(
           "Invalid incoming charter enquiries API response"
         );
       }
 
-      state.incomingEnquiries = result.data.enquiries;
+      state.incomingEnquiries = result.data;
 
-      const pagination = result.data.pagination || {};
+      const pagination = result.pagination || {};
 
       state.incomingTotal = Number(pagination.total || 0);
       state.incomingTotalPages = Number(pagination.totalPages || 0);
@@ -875,7 +951,923 @@
     }
   }
 
+  function currentMarketplaceUser() {
+    try {
+      const raw = localStorage.getItem("marine_session");
+      if (!raw) return null;
+
+      const session = JSON.parse(raw);
+
+      return session?.user || null;
+
+    } catch (error) {
+      console.error(
+        "Unable to read current dashboard user:",
+        error
+      );
+
+      return null;
+    }
+  }
+
+  function canManageMarketplace() {
+    const user = currentMarketplaceUser();
+
+    return Boolean(
+      user &&
+      ["super_admin", "admin"].includes(user.role)
+    );
+  }
+
+  function setAdminMarketplaceMessage(message) {
+    const element =
+      $("marketplaceCreateListingMessage");
+
+    if (!element) return;
+
+    element.textContent = message || "";
+  }
+
+  function populateMarketplaceVesselOptions() {
+    const select =
+      $("marketplaceListingVesselId");
+
+    if (!select) return;
+
+    const vessels = Array.isArray(window.LIVE?.vessels)
+      ? window.LIVE.vessels
+      : [];
+
+    const currentValue = select.value;
+
+    select.innerHTML = `
+      <option value="">Select vessel</option>
+      ${vessels
+        .filter(vessel => {
+          const status =
+            String(vessel.status || "").toLowerCase();
+
+          return ![
+            "retired",
+            "out_of_service"
+          ].includes(status);
+        })
+        .map(vessel => `
+          <option value="${escapeHtml(
+            String(vessel.id)
+          )}">
+            ${escapeHtml(
+              vessel.name ||
+              vessel.vesselName ||
+              vessel.vessel_code ||
+              vessel.vesselCode ||
+              `Vessel #${vessel.id}`
+            )}
+            ${
+              vessel.vessel_code || vessel.vesselCode
+                ? ` — ${escapeHtml(
+                    vessel.vessel_code ||
+                    vessel.vesselCode
+                  )}`
+                : ""
+            }
+          </option>
+        `)
+        .join("")}
+    `;
+
+    if (
+      currentValue &&
+      Array.from(select.options).some(
+        option => option.value === currentValue
+      )
+    ) {
+      select.value = currentValue;
+    }
+  }
+
+  function renderAdminMarketplaceStatus(listing) {
+    return `
+      <div class="marketplace-admin-statuses">
+        <span class="marketplace-status ${escapeHtml(
+          listing.verificationStatus || "pending"
+        )}">
+          Verification: ${escapeHtml(
+            formatLabel(
+              listing.verificationStatus || "pending"
+            )
+          )}
+        </span>
+
+        <span class="marketplace-status ${escapeHtml(
+          listing.listingStatus || "draft"
+        )}">
+          Listing: ${escapeHtml(
+            formatLabel(
+              listing.listingStatus || "draft"
+            )
+          )}
+        </span>
+
+        <span class="marketplace-status ${escapeHtml(
+          listing.availabilityStatus || "unavailable"
+        )}">
+          Availability: ${escapeHtml(
+            formatLabel(
+              listing.availabilityStatus ||
+              "unavailable"
+            )
+          )}
+        </span>
+      </div>
+    `;
+  }
+
+  function renderAdminMarketplaceActions(listing) {
+    const actions = [];
+
+    if (listing.verificationStatus === "pending") {
+      actions.push(`
+        <button
+          type="button"
+          class="btn marketplace-admin-action"
+          data-marketplace-action="verify"
+          data-marketplace-listing-id="${escapeHtml(
+            String(listing.id)
+          )}"
+        >
+          Verify
+        </button>
+      `);
+
+      actions.push(`
+        <button
+          type="button"
+          class="btn ghost marketplace-admin-action"
+          data-marketplace-action="reject"
+          data-marketplace-listing-id="${escapeHtml(
+            String(listing.id)
+          )}"
+        >
+          Reject
+        </button>
+      `);
+    }
+
+    if (
+      listing.verificationStatus === "verified" &&
+      listing.listingStatus === "draft"
+    ) {
+      actions.push(`
+        <button
+          type="button"
+          class="btn marketplace-admin-action"
+          data-marketplace-action="publish"
+          data-marketplace-listing-id="${escapeHtml(
+            String(listing.id)
+          )}"
+        >
+          Publish
+        </button>
+      `);
+    }
+
+    if (
+      listing.verificationStatus === "verified" &&
+      listing.listingStatus === "published"
+    ) {
+      actions.push(`
+        <button
+          type="button"
+          class="btn ghost marketplace-admin-action"
+          data-marketplace-action="suspend"
+          data-marketplace-listing-id="${escapeHtml(
+            String(listing.id)
+          )}"
+        >
+          Suspend
+        </button>
+      `);
+    }
+
+    if (
+      listing.verificationStatus === "verified" &&
+      listing.listingStatus === "suspended"
+    ) {
+      actions.push(`
+        <button
+          type="button"
+          class="btn marketplace-admin-action"
+          data-marketplace-action="resume"
+          data-marketplace-listing-id="${escapeHtml(
+            String(listing.id)
+          )}"
+        >
+          Resume
+        </button>
+      `);
+    }
+
+    if (!actions.length) {
+      return `
+        <span class="muted small">
+          No lifecycle action available
+        </span>
+      `;
+    }
+
+    return actions.join("");
+  }
+
+  function renderAdminMarketplaceListings() {
+    const body =
+      $("marketplaceAdminListingsBody");
+
+    if (!body) return;
+
+    if (!state.adminListings.length) {
+      body.innerHTML = `
+        <div class="marketplace-empty muted">
+          No marketplace listings found.
+        </div>
+      `;
+
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="marketplace-admin-list">
+        ${state.adminListings.map(listing => `
+          <article class="marketplace-admin-listing">
+            <div class="marketplace-admin-listing-head">
+              <div>
+                <strong>
+                  ${escapeHtml(
+                    listing.title ||
+                    `Listing #${listing.id}`
+                  )}
+                </strong>
+
+                <div class="muted small">
+                  ${escapeHtml(
+                    listing.vesselName ||
+                    listing.vesselCode ||
+                    "Vessel"
+                  )}
+                  ${
+                    listing.vesselCode
+                      ? ` • ${escapeHtml(
+                          listing.vesselCode
+                        )}`
+                      : ""
+                  }
+                </div>
+              </div>
+
+              <div class="muted small">
+                #${escapeHtml(String(listing.id))}
+              </div>
+            </div>
+
+            ${renderAdminMarketplaceStatus(listing)}
+
+            <div class="marketplace-admin-listing-grid">
+              <div>
+                <span class="muted small">
+                  Charter Type
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    formatLabel(listing.charterType)
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span class="muted small">
+                  Cargo
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    listing.cargoType ||
+                    "Not specified"
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span class="muted small">
+                  Capacity
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    Number(
+                      listing.capacityTons || 0
+                    ).toLocaleString()
+                  )} tons
+                </strong>
+              </div>
+
+              <div>
+                <span class="muted small">
+                  Rate
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    formatRate(
+                      listing.indicativeRate,
+                      listing.currencyCode,
+                      listing.rateUnit
+                    )
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span class="muted small">
+                  Available From
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    formatDate(
+                      listing.availableFrom
+                    )
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span class="muted small">
+                  Available Until
+                </span>
+
+                <strong>
+                  ${escapeHtml(
+                    formatDate(
+                      listing.availableUntil
+                    )
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            ${
+              listing.description
+                ? `
+                  <div class="muted small marketplace-admin-description">
+                    ${escapeHtml(
+                      listing.description
+                    )}
+                  </div>
+                `
+                : ""
+            }
+
+            <div class="marketplace-listing-footer">
+              <span class="muted small">
+                Updated ${escapeHtml(
+                  formatDate(listing.updatedAt)
+                )}
+              </span>
+
+              <div class="marketplace-admin-actions">
+                ${renderAdminMarketplaceActions(
+                  listing
+                )}
+              </div>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  async function loadAdminMarketplaceListings() {
+    if (!canManageMarketplace()) return;
+    if (state.loadingAdminListings) return;
+
+    const body =
+      $("marketplaceAdminListingsBody");
+
+    state.loadingAdminListings = true;
+
+    if (body) {
+      body.innerHTML = `
+        <div class="marketplace-empty muted">
+          Loading marketplace management listings...
+        </div>
+      `;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/marketplace/listings`,
+        {
+          method: "GET",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Marketplace management API returned HTTP ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      if (
+        !result.success ||
+        !Array.isArray(result.data)
+      ) {
+        throw new Error(
+          "Invalid marketplace management API response"
+        );
+      }
+
+      state.adminListings = result.data;
+
+      renderAdminMarketplaceListings();
+
+      const count =
+        $("marketplaceAdminListingCount");
+
+      if (count) {
+        count.textContent = String(
+          result.count ??
+          state.adminListings.length
+        );
+      }
+
+    } catch (error) {
+      console.error(
+        "Marketplace management listings error:",
+        error
+      );
+
+      state.adminListings = [];
+
+      if (body) {
+        body.innerHTML = `
+          <div class="marketplace-error">
+            Unable to load marketplace management listings.
+          </div>
+        `;
+      }
+
+      const count =
+        $("marketplaceAdminListingCount");
+
+      if (count) {
+        count.textContent = "0";
+      }
+
+    } finally {
+      state.loadingAdminListings = false;
+    }
+  }
+
+  async function createAdminMarketplaceListing(event) {
+    event.preventDefault();
+
+    if (!canManageMarketplace()) return;
+    if (state.creatingAdminListing) return;
+
+    const vesselId = Number(
+      $("marketplaceListingVesselId")?.value
+    );
+
+    const title =
+      $("marketplaceListingTitle")
+        ?.value?.trim() || "";
+
+    const description =
+      $("marketplaceListingDescription")
+        ?.value?.trim() || null;
+
+    const charterType =
+      $("marketplaceListingCharterType")
+        ?.value?.trim() || "";
+
+    const cargoType =
+      $("marketplaceListingCargoType")
+        ?.value?.trim() || null;
+
+    const availabilityStatus =
+      $("marketplaceListingAvailabilityStatus")
+        ?.value?.trim() || "available";
+
+    const availableFrom =
+      $("marketplaceListingAvailableFrom")
+        ?.value || "";
+
+    const availableUntil =
+      $("marketplaceListingAvailableUntil")
+        ?.value || null;
+
+    const minimumDaysValue =
+      $("marketplaceListingMinimumDays")
+        ?.value?.trim();
+
+    const maximumDaysValue =
+      $("marketplaceListingMaximumDays")
+        ?.value?.trim();
+
+    const indicativeRateValue =
+      $("marketplaceListingIndicativeRate")
+        ?.value?.trim();
+
+    const minimumCharterDays =
+      minimumDaysValue
+        ? Number(minimumDaysValue)
+        : null;
+
+    const maximumCharterDays =
+      maximumDaysValue
+        ? Number(maximumDaysValue)
+        : null;
+
+    const indicativeRate =
+      indicativeRateValue
+        ? Number(indicativeRateValue)
+        : null;
+
+    const rateUnit =
+      $("marketplaceListingRateUnit")
+        ?.value?.trim() || "per_day";
+
+    const currencyCode =
+      $("marketplaceListingCurrency")
+        ?.value?.trim()
+        .toUpperCase() || "USD";
+
+    if (!Number.isInteger(vesselId) || vesselId <= 0) {
+      setAdminMarketplaceMessage(
+        "Please select a valid vessel."
+      );
+
+      return;
+    }
+
+    if (!title) {
+      setAdminMarketplaceMessage(
+        "Listing title is required."
+      );
+
+      return;
+    }
+
+    if (!charterType) {
+      setAdminMarketplaceMessage(
+        "Please select a charter type."
+      );
+
+      return;
+    }
+
+    if (!availableFrom) {
+      setAdminMarketplaceMessage(
+        "Available-from date is required."
+      );
+
+      return;
+    }
+
+    if (
+      minimumCharterDays !== null &&
+      (!Number.isInteger(minimumCharterDays) ||
+        minimumCharterDays <= 0)
+    ) {
+      setAdminMarketplaceMessage(
+        "Minimum charter days must be a positive whole number."
+      );
+
+      return;
+    }
+
+    if (
+      maximumCharterDays !== null &&
+      (!Number.isInteger(maximumCharterDays) ||
+        maximumCharterDays <= 0)
+    ) {
+      setAdminMarketplaceMessage(
+        "Maximum charter days must be a positive whole number."
+      );
+
+      return;
+    }
+
+    if (
+      minimumCharterDays !== null &&
+      maximumCharterDays !== null &&
+      minimumCharterDays > maximumCharterDays
+    ) {
+      setAdminMarketplaceMessage(
+        "Minimum charter days cannot exceed maximum charter days."
+      );
+
+      return;
+    }
+
+    if (
+      indicativeRate !== null &&
+      (!Number.isFinite(indicativeRate) ||
+        indicativeRate < 0)
+    ) {
+      setAdminMarketplaceMessage(
+        "Indicative rate must be zero or greater."
+      );
+
+      return;
+    }
+
+    if (!/^[A-Z]{3}$/.test(currencyCode)) {
+      setAdminMarketplaceMessage(
+        "Currency must be a three-letter code such as USD."
+      );
+
+      return;
+    }
+
+    const form =
+      $("marketplaceCreateListingForm");
+
+    const submitButton =
+      $("marketplaceCreateListingBtn");
+
+    state.creatingAdminListing = true;
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating...";
+    }
+
+    setAdminMarketplaceMessage(
+      "Creating marketplace listing..."
+    );
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/marketplace/listings`,
+        {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            vesselId,
+            title,
+            description,
+            charterType,
+            cargoType,
+            availabilityStatus,
+            availableFrom,
+            availableUntil,
+            minimumCharterDays,
+            maximumCharterDays,
+            indicativeRate,
+            rateUnit,
+            currencyCode
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Marketplace listing creation returned HTTP ${response.status}`
+        );
+      }
+
+      if (form) {
+        form.reset();
+      }
+
+      const currencyInput =
+        $("marketplaceListingCurrency");
+
+      if (currencyInput) {
+        currencyInput.value = "USD";
+      }
+
+      setAdminMarketplaceMessage(
+        "Marketplace listing created successfully. It is now pending verification."
+      );
+
+      populateMarketplaceVesselOptions();
+
+      await loadAdminMarketplaceListings();
+
+    } catch (error) {
+      console.error(
+        "Marketplace listing creation error:",
+        error
+      );
+
+      setAdminMarketplaceMessage(
+        error.message ||
+        "Unable to create marketplace listing."
+      );
+
+    } finally {
+      state.creatingAdminListing = false;
+
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Create Listing";
+      }
+    }
+  }
+
+  async function updateAdminMarketplaceListing(
+    listingId,
+    action
+  ) {
+    if (!canManageMarketplace()) return;
+
+    const endpoints = {
+      verify: {
+        method: "PATCH",
+        path:
+          `/api/marketplace/listings/${listingId}/verification`,
+        body: {
+          verificationStatus: "verified"
+        },
+        message:
+          "Listing verified successfully."
+      },
+
+      reject: {
+        method: "PATCH",
+        path:
+          `/api/marketplace/listings/${listingId}/verification`,
+        body: {
+          verificationStatus: "rejected"
+        },
+        message:
+          "Listing rejected successfully."
+      },
+
+      publish: {
+        method: "PATCH",
+        path:
+          `/api/marketplace/listings/${listingId}/publish`,
+        body: {},
+        message:
+          "Listing published successfully."
+      },
+
+      suspend: {
+        method: "PATCH",
+        path:
+          `/api/marketplace/listings/${listingId}/suspend`,
+        body: {},
+        message:
+          "Listing suspended successfully."
+      },
+
+      resume: {
+        method: "PATCH",
+        path:
+          `/api/marketplace/listings/${listingId}/resume`,
+        body: {},
+        message:
+          "Listing resumed successfully."
+      }
+    };
+
+    const configuration = endpoints[action];
+
+    if (!configuration) return;
+
+    const actionLabels = {
+      verify: "Verify",
+      reject: "Reject",
+      publish: "Publish",
+      suspend: "Suspend",
+      resume: "Resume"
+    };
+
+    const label =
+      actionLabels[action] || "Update";
+
+    if (
+      !window.confirm(
+        `${label} marketplace listing #${listingId}?`
+      )
+    ) {
+      return;
+    }
+
+    const buttons = document.querySelectorAll(
+      `[data-marketplace-listing-id="${listingId}"]`
+    );
+
+    buttons.forEach(button => {
+      button.disabled = true;
+    });
+
+    try {
+      const response = await fetch(
+        `${API_BASE}${configuration.path}`,
+        {
+          method: configuration.method,
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(
+            configuration.body
+          )
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Marketplace listing update returned HTTP ${response.status}`
+        );
+      }
+
+      setAdminMarketplaceMessage(
+        configuration.message
+      );
+
+      await loadAdminMarketplaceListings();
+
+    } catch (error) {
+      console.error(
+        "Marketplace listing lifecycle update error:",
+        error
+      );
+
+      setAdminMarketplaceMessage(
+        error.message ||
+        "Unable to update marketplace listing."
+      );
+
+    } finally {
+      buttons.forEach(button => {
+        button.disabled = false;
+      });
+    }
+  }
+
   function bindMarketplaceEvents() {
+    const adminCreateForm =
+      $("marketplaceCreateListingForm");
+
+    if (adminCreateForm) {
+      adminCreateForm.addEventListener(
+        "submit",
+        createAdminMarketplaceListing
+      );
+    }
+
+    const adminListingsBody =
+      $("marketplaceAdminListingsBody");
+
+    if (adminListingsBody) {
+      adminListingsBody.addEventListener(
+        "click",
+        event => {
+          const actionButton =
+            event.target.closest(
+              "[data-marketplace-action]"
+            );
+
+          if (!actionButton) return;
+
+          const action =
+            actionButton.dataset.marketplaceAction;
+
+          const listingId =
+            actionButton.dataset.marketplaceListingId;
+
+          if (!action || !listingId) return;
+
+          updateAdminMarketplaceListing(
+            listingId,
+            action
+          );
+        }
+      );
+    }
+
     const filterButton =
       $("marketplaceApplyFilters");
 
@@ -965,9 +1957,21 @@
 
   function initMarketplace() {
     bindMarketplaceEvents();
+
     loadMarketplaceListings();
+    loadCharterPorts();
     loadCharterEnquiries();
     loadIncomingCharterEnquiries();
+
+    const adminManagement =
+      $("marketplaceAdminManagement");
+
+    if (adminManagement && canManageMarketplace()) {
+      adminManagement.hidden = false;
+
+      populateMarketplaceVesselOptions();
+      loadAdminMarketplaceListings();
+    }
   }
 
   window.MarineMarketplace = {

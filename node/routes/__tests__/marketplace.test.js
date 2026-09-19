@@ -138,6 +138,59 @@ describe("Marketplace routes", () => {
   });
 
 
+    test("GET /api/marketplace/listings returns management listings", async () => {
+      pool.query.mockResolvedValueOnce([[{
+        id: "25",
+        vessel_id: "10",
+        vessel_code: "MT-001",
+        vessel_name: "Ocean Pioneer",
+        vessel_type: "crude oil tanker",
+        flag_country: "Nigeria",
+        imo_number: "IMO1234567",
+        capacity_tons: "75000.00",
+        title: "75,000 MT Crude Oil Tanker",
+        description: "Available for voyage charter.",
+        charter_type: "voyage_charter",
+        cargo_type: "crude oil",
+        availability_status: "available",
+        available_from: "2026-10-01",
+        available_until: "2026-12-31",
+        minimum_charter_days: 10,
+        maximum_charter_days: 45,
+        indicative_rate: "25000.00",
+        rate_unit: "per_day",
+        currency_code: "USD",
+        verification_status: "pending",
+        listing_status: "draft",
+        listed_by_user_id: "1",
+        created_at: "2026-09-15T10:00:00.000Z",
+        updated_at: "2026-09-15T10:00:00.000Z"
+      }]]);
+
+      const response = await request(app).get("/api/marketplace/listings");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.count).toBe(1);
+      expect(response.body.data[0].id).toBe(25);
+      expect(response.body.data[0].verificationStatus).toBe("pending");
+      expect(response.body.data[0].listingStatus).toBe("draft");
+    });
+
+    test("GET /api/marketplace/listings returns 500 when the database fails", async () => {
+      pool.query.mockRejectedValueOnce(new Error("database unavailable"));
+
+      const response = await request(app).get("/api/marketplace/listings");
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({
+        success: false,
+        error: "Unable to load marketplace listings"
+      });
+    });
+
+
+
   test("POST /api/marketplace/listings creates a draft listing", async () => {
     pool.query
       .mockResolvedValueOnce([

@@ -858,6 +858,221 @@
 
   <div class="divider"></div>
 
+  <!-- Admin-only Marketplace Management -->
+  <section
+    id="marketplaceAdminManagement"
+    class="marketplace-admin-management"
+    hidden
+  >
+    <div class="card-head marketplace-subhead">
+      <div>
+        <div class="card-title">Marketplace Management</div>
+        <div class="muted small">
+          Create, verify, publish and manage vessel marketplace listings.
+        </div>
+      </div>
+
+      <div class="badge">
+        <span id="marketplaceAdminListingCount">0</span> Listings
+      </div>
+    </div>
+
+    <form id="marketplaceCreateListingForm">
+      <div class="marketplace-form-grid">
+        <div class="marketplace-field marketplace-field-wide">
+          <label for="marketplaceListingVesselId" class="muted small">
+            Vessel
+          </label>
+          <select id="marketplaceListingVesselId" required>
+            <option value="">Select vessel</option>
+          </select>
+        </div>
+
+        <div class="marketplace-field marketplace-field-wide">
+          <label for="marketplaceListingTitle" class="muted small">
+            Listing Title
+          </label>
+          <input
+            id="marketplaceListingTitle"
+            type="text"
+            maxlength="255"
+            placeholder="e.g. 75,000 MT Crude Oil Tanker"
+            required
+          >
+        </div>
+
+        <div class="marketplace-field marketplace-field-wide">
+          <label for="marketplaceListingDescription" class="muted small">
+            Description
+          </label>
+          <textarea
+            id="marketplaceListingDescription"
+            placeholder="Describe the vessel and charter opportunity..."
+          ></textarea>
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingCharterType" class="muted small">
+            Charter Type
+          </label>
+          <select id="marketplaceListingCharterType" required>
+            <option value="">Select charter type</option>
+            <option value="voyage_charter">Voyage Charter</option>
+            <option value="time_charter">Time Charter</option>
+            <option value="bareboat">Bareboat</option>
+            <option value="contract_of_affreightment">
+              Contract of Affreightment
+            </option>
+          </select>
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingCargoType" class="muted small">
+            Cargo Type
+          </label>
+          <input
+            id="marketplaceListingCargoType"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. Crude Oil"
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingAvailabilityStatus" class="muted small">
+            Availability
+          </label>
+          <select id="marketplaceListingAvailabilityStatus" required>
+            <option value="available">Available</option>
+            <option value="under_enquiry">Under Enquiry</option>
+            <option value="under_negotiation">Under Negotiation</option>
+            <option value="chartered">Chartered</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingRateUnit" class="muted small">
+            Rate Unit
+          </label>
+          <select id="marketplaceListingRateUnit" required>
+            <option value="per_day">Per Day</option>
+            <option value="per_voyage">Per Voyage</option>
+            <option value="per_metric_ton">Per Metric Ton</option>
+            <option value="lump_sum">Lump Sum</option>
+          </select>
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingAvailableFrom" class="muted small">
+            Available From
+          </label>
+          <input
+            id="marketplaceListingAvailableFrom"
+            type="date"
+            required
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingAvailableUntil" class="muted small">
+            Available Until
+          </label>
+          <input
+            id="marketplaceListingAvailableUntil"
+            type="date"
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingMinimumDays" class="muted small">
+            Minimum Charter Days
+          </label>
+          <input
+            id="marketplaceListingMinimumDays"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Optional"
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingMaximumDays" class="muted small">
+            Maximum Charter Days
+          </label>
+          <input
+            id="marketplaceListingMaximumDays"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Optional"
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingIndicativeRate" class="muted small">
+            Indicative Rate
+          </label>
+          <input
+            id="marketplaceListingIndicativeRate"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Optional"
+          >
+        </div>
+
+        <div class="marketplace-field">
+          <label for="marketplaceListingCurrency" class="muted small">
+            Currency
+          </label>
+          <input
+            id="marketplaceListingCurrency"
+            type="text"
+            maxlength="3"
+            value="USD"
+            placeholder="USD"
+            required
+          >
+        </div>
+      </div>
+
+      <div
+        id="marketplaceCreateListingMessage"
+        class="marketplace-form-message"
+        role="alert"
+        aria-live="polite"
+      ></div>
+
+      <div class="marketplace-form-actions">
+        <button type="submit" class="btn" id="marketplaceCreateListingBtn">
+          Create Listing
+        </button>
+      </div>
+    </form>
+
+    <div class="divider"></div>
+
+    <div class="marketplace-subhead">
+      <div class="card-title">Listing Lifecycle</div>
+      <div class="muted small">
+        Review listings and move them through verification and publication.
+      </div>
+    </div>
+
+    <div
+      id="marketplaceAdminListingsBody"
+      class="marketplace-admin-listings"
+    >
+      <div class="marketplace-empty muted">
+        Loading marketplace management listings...
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
   <div class="card-head marketplace-subhead">
     <div>
       <div class="card-title">My Charter Enquiries</div>
@@ -941,16 +1156,20 @@
 
         <div class="marketplace-field">
           <label for="charterEnquiryOriginPortId" class="muted small">
-            Origin Port ID
+            Origin Port
           </label>
-          <input id="charterEnquiryOriginPortId" type="number" min="1" step="1" placeholder="Optional">
+          <select id="charterEnquiryOriginPortId">
+            <option value="">Select origin port (optional)</option>
+          </select>
         </div>
 
         <div class="marketplace-field">
           <label for="charterEnquiryDestinationPortId" class="muted small">
-            Destination Port ID
+            Destination Port
           </label>
-          <input id="charterEnquiryDestinationPortId" type="number" min="1" step="1" placeholder="Optional">
+          <select id="charterEnquiryDestinationPortId">
+            <option value="">Select destination port (optional)</option>
+          </select>
         </div>
 
         <div class="marketplace-field">

@@ -2641,6 +2641,77 @@ select{
   margin-top: 0;
 }
 
+.marketplace-admin-management {
+  margin-top: 18px;
+}
+
+.marketplace-subhead {
+  align-items: flex-start;
+}
+
+.marketplace-form-message {
+  min-height: 20px;
+  margin-top: 12px;
+}
+
+.marketplace-admin-list {
+  display: grid;
+  gap: 14px;
+}
+
+.marketplace-admin-listing {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.marketplace-admin-listing-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.marketplace-admin-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.marketplace-admin-listing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.marketplace-admin-listing-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.marketplace-admin-description {
+  margin-top: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.marketplace-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.marketplace-admin-action {
+  min-width: 90px;
+}
+
 @media (max-width: 1200px) {
   .marketplace-filters {
     grid-template-columns: repeat(3, minmax(0, 1fr));

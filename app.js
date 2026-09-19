@@ -16,6 +16,8 @@ const LIVE = {
   vessels: []
 };
 
+window.LIVE = LIVE;
+
 
 function startLiveRefresh(){
   setInterval(() => {
