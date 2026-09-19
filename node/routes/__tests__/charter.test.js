@@ -2910,6 +2910,241 @@ describe("Charter routes", () => {
             id: 2,
             enquiry_id: 8,
             offered_by_user_id: 7,
+            parent_offer_id: null,
+            amount: null,
+            currency_code: "USD",
+            rate_unit: "per_voyage",
+            charter_days: null,
+            terms: "Requester counter-offer.",
+            status: "pending",
+            expires_at: "2026-09-26 12:00:00",
+            created_at: "2026-09-19 13:00:00",
+            updated_at: "2026-09-19 13:00:00"
+          }
+        ]]),
+      beginTransaction: jest.fn(),
+      commit: jest.fn(),
+      rollback: jest.fn(),
+      release: jest.fn()
+    };
+
+    pool.getConnection.mockResolvedValueOnce(connection);
+
+    const response = await request(app)
+      .post("/api/charter/offers/1/counter")
+      .send({
+        amount: 7500,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 7,
+        terms: "Requester counter-offer.",
+        expiresAt: "2026-09-26T12:00:00Z"
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({
+      id: 2,
+      enquiryId: 8,
+      offeredByUserId: 7,
+      parentOfferId: null,
+      amount: null,
+      currencyCode: "USD",
+      rateUnit: "per_voyage",
+      charterDays: null,
+      terms: "Requester counter-offer.",
+      status: "pending"
+    });
+    expect(response.body.message).toBe(
+      "Charter counter-offer created successfully"
+    );
+
+    expect(pool.getConnection).toHaveBeenCalledTimes(1);
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.commit).toHaveBeenCalledTimes(1);
+    expect(connection.rollback).not.toHaveBeenCalled();
+    expect(connection.release).toHaveBeenCalledTimes(1);
+
+    expect(connection.query).toHaveBeenCalledTimes(7);
+
+    expect(connection.query.mock.calls[3][0]).toContain(
+      "INSERT INTO charter_offers"
+    );
+    expect(connection.query.mock.calls[4][0]).toContain(
+      "UPDATE charter_offers"
+    );
+    expect(connection.query.mock.calls[5][0]).toContain(
+      "UPDATE charter_enquiries"
+    );
+  });
+
+  test("POST /api/charter/offers/:id/counter rejects an enquiry with an invalid negotiation status", async () => {
+    mockUserId = 7;
+
+    const connection = {
+      query: jest.fn()
+        .mockResolvedValueOnce([[
+          {
+            id: 8,
+            requester_user_id: 7,
+            status: "submitted",
+            listed_by_user_id: 12
+          }
+        ]]),
+      beginTransaction: jest.fn(),
+      commit: jest.fn(),
+      rollback: jest.fn(),
+      release: jest.fn()
+    };
+
+    pool.getConnection.mockResolvedValueOnce(connection);
+
+    const response = await request(app)
+      .post("/api/charter/offers/1/counter")
+      .send({
+        amount: 7500,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 7,
+        terms: "Invalid enquiry status test.",
+        expiresAt: "2026-09-26T12:00:00Z"
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "This charter enquiry is not open for negotiation"
+    );
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.rollback).toHaveBeenCalledTimes(1);
+    expect(connection.commit).not.toHaveBeenCalled();
+    expect(connection.release).toHaveBeenCalledTimes(1);
+    expect(connection.query).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /api/charter/offers/:id/counter returns 404 when the current offer is missing", async () => {
+    mockUserId = 7;
+
+    const connection = {
+      query: jest.fn()
+        .mockResolvedValueOnce([[
+          {
+            id: 8,
+            requester_user_id: 7,
+            status: "offer_made",
+            listed_by_user_id: 12
+          }
+        ]])
+        .mockResolvedValueOnce([[]]),
+      beginTransaction: jest.fn(),
+      commit: jest.fn(),
+      rollback: jest.fn(),
+      release: jest.fn()
+    };
+
+    pool.getConnection.mockResolvedValueOnce(connection);
+
+    const response = await request(app)
+      .post("/api/charter/offers/1/counter")
+      .send({
+        amount: 7500,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 7,
+        terms: "Missing current offer test.",
+        expiresAt: "2026-09-26T12:00:00Z"
+      });
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe("Charter offer not found");
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.rollback).toHaveBeenCalledTimes(1);
+    expect(connection.commit).not.toHaveBeenCalled();
+    expect(connection.release).toHaveBeenCalledTimes(1);
+    expect(connection.query).toHaveBeenCalledTimes(2);
+  });
+
+  test("POST /api/charter/offers/:id/counter returns 500 when the database fails after connection acquisition", async () => {
+    mockUserId = 7;
+
+    const connection = {
+      query: jest.fn().mockRejectedValueOnce(new Error("database failure")),
+      beginTransaction: jest.fn(),
+      commit: jest.fn(),
+      rollback: jest.fn(),
+      release: jest.fn()
+    };
+
+    pool.getConnection.mockResolvedValueOnce(connection);
+
+    const response = await request(app)
+      .post("/api/charter/offers/1/counter")
+      .send({
+        amount: 7500,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 7,
+        terms: "Database failure test.",
+        expiresAt: "2026-09-26T12:00:00Z"
+      });
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "Unable to create charter counter-offer"
+    );
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.rollback).toHaveBeenCalledTimes(1);
+    expect(connection.release).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /api/charter/offers/:id/counter returns non-null normalized response fields", async () => {
+    mockUserId = 7;
+
+    const connection = {
+      query: jest.fn()
+        .mockResolvedValueOnce([[
+          {
+            id: 8,
+            requester_user_id: 7,
+            status: "offer_made",
+            listed_by_user_id: 12
+          }
+        ]])
+        .mockResolvedValueOnce([[
+          {
+            id: 1,
+            enquiry_id: 8,
+            offered_by_user_id: 12,
+            parent_offer_id: null,
+            amount: "8500.00",
+            currency_code: "USD",
+            rate_unit: "per_voyage",
+            charter_days: 7,
+            terms: "Initial owner offer.",
+            status: "pending",
+            expires_at: "2026-09-25 12:00:00",
+            created_at: "2026-09-19 12:00:00",
+            updated_at: "2026-09-19 12:00:00",
+            is_expired: 0
+          }
+        ]])
+        .mockResolvedValueOnce([[
+          {
+            id: 1,
+            status: "pending",
+            expires_at: "2026-09-25 12:00:00"
+          }
+        ]])
+        .mockResolvedValueOnce([{ insertId: 2 }])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([{ affectedRows: 1 }])
+        .mockResolvedValueOnce([[
+          {
+            id: 2,
+            enquiry_id: 8,
+            offered_by_user_id: 7,
             parent_offer_id: 1,
             amount: "7500.00",
             currency_code: "USD",
@@ -2955,26 +3190,123 @@ describe("Charter routes", () => {
       terms: "Requester counter-offer.",
       status: "pending"
     });
-    expect(response.body.message).toBe(
-      "Charter counter-offer created successfully"
-    );
-
-    expect(pool.getConnection).toHaveBeenCalledTimes(1);
-    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commit).toHaveBeenCalledTimes(1);
     expect(connection.rollback).not.toHaveBeenCalled();
     expect(connection.release).toHaveBeenCalledTimes(1);
-
-    expect(connection.query).toHaveBeenCalledTimes(7);
-
-    expect(connection.query.mock.calls[3][0]).toContain(
-      "INSERT INTO charter_offers"
-    );
-    expect(connection.query.mock.calls[4][0]).toContain(
-      "UPDATE charter_offers"
-    );
-    expect(connection.query.mock.calls[5][0]).toContain(
-      "UPDATE charter_enquiries"
-    );
   });
+
+  test("POST /api/charter/offers/:id/counter rejects an invalid offer id", async () => {
+    const response = await request(app)
+      .post("/api/charter/offers/not-an-id/counter")
+      .send({
+        amount: 7500,
+        currencyCode: "USD",
+        rateUnit: "per_voyage",
+        charterDays: 7,
+        terms: "Invalid ID test.",
+        expiresAt: "2026-09-26T12:00:00Z"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe(
+      "offer id must be a positive integer"
+    );
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+test("POST /api/charter/offers/:id/counter rejects a non-pending latest offer", async () => {
+  mockUserId = 7;
+
+  const connection = {
+    query: jest.fn()
+      .mockResolvedValueOnce([[
+        {
+          id: 8,
+          requester_user_id: 7,
+          status: "offer_made",
+          listed_by_user_id: 12
+        }
+      ]])
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          enquiry_id: 8,
+          offered_by_user_id: 12,
+          parent_offer_id: null,
+          amount: "8500.00",
+          currency_code: "USD",
+          rate_unit: "per_voyage",
+          charter_days: 7,
+          terms: "Initial owner offer.",
+          status: "countered",
+          expires_at: "2026-09-25 12:00:00",
+          created_at: "2026-09-19 12:00:00",
+          updated_at: "2026-09-19 12:00:00",
+          is_expired: 0
+        }
+      ]])
+      .mockResolvedValueOnce([[
+        {
+          id: 1,
+          status: "countered",
+          expires_at: "2026-09-25 12:00:00"
+        }
+      ]]),
+    beginTransaction: jest.fn(),
+    commit: jest.fn(),
+    rollback: jest.fn(),
+    release: jest.fn()
+  };
+
+  pool.getConnection.mockResolvedValueOnce(connection);
+
+  const response = await request(app)
+    .post("/api/charter/offers/1/counter")
+    .send({
+      amount: 7500,
+      currencyCode: "USD",
+      rateUnit: "per_voyage",
+      charterDays: 7,
+      terms: "Non-pending test.",
+      expiresAt: "2026-09-26T12:00:00Z"
+    });
+
+  expect(response.status).toBe(409);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error).toBe(
+    "This charter offer is no longer pending"
+  );
+  expect(connection.rollback).toHaveBeenCalledTimes(1);
+  expect(connection.commit).not.toHaveBeenCalled();
+  expect(connection.release).toHaveBeenCalledTimes(1);
+});
+
+
+test("POST /api/charter/offers/:id/counter returns 500 when connection acquisition fails", async () => {
+  mockUserId = 7;
+
+  pool.getConnection.mockRejectedValueOnce(
+    new Error("connection acquisition failure")
+  );
+
+  const response = await request(app)
+    .post("/api/charter/offers/1/counter")
+    .send({
+      amount: 7500,
+      currencyCode: "USD",
+      rateUnit: "per_voyage",
+      charterDays: 7,
+      terms: "Connection acquisition failure test.",
+      expiresAt: "2026-09-26T12:00:00Z"
+    });
+
+  expect(response.status).toBe(500);
+  expect(response.body.success).toBe(false);
+  expect(response.body.error).toBe(
+    "Unable to create charter counter-offer"
+  );
+  expect(pool.getConnection).toHaveBeenCalledTimes(1);
+});
+
 });

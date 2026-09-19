@@ -3967,6 +3967,16 @@ function renderCharterEnquiries() {
 
         }
 
+        charterEnquiriesBody.addEventListener("submit", event => {
+          if (
+            event.target.matches(
+              "[data-charter-counter-form]"
+            )
+          ) {
+            submitCharterCounterOffer(event);
+          }
+        });
+
       const incomingStatus = $("incomingCharterStatus");
     if (incomingStatus) {
       incomingStatus.addEventListener("change", () => {
