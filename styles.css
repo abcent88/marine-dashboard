@@ -2581,6 +2581,56 @@ select{
   background: var(--surface);
 }
 
+.marketplace-enquiry-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.marketplace-enquiry-actions .btn {
+  width: auto;
+  margin-top: 0;
+}
+
+.marketplace-offer-form {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.marketplace-offer-form[hidden] {
+  display: none;
+}
+
+.marketplace-offer-form select,
+.marketplace-offer-form input,
+.marketplace-offer-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+}
+
+.marketplace-offer-form .marketplace-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.marketplace-offer-form .marketplace-form-head .btn {
+  width: auto;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
 .marketplace-enquiry-form[hidden] {
   display: none;
 }

@@ -17,7 +17,11 @@
     loadingIncomingEnquiries: false,
     adminListings: [],
     loadingAdminListings: false,
-    creatingAdminListing: false
+    creatingAdminListing: false,
+    editingEnquiryId: null,
+    viewingEnquiryOffersId: null,
+    incomingViewingOffersId: null,
+      counteringOfferId: null
   };
 
   function formatLabel(value) {
@@ -290,9 +294,20 @@
 
         <div class="marketplace-listing-footer">
           <span class="muted small">
-            ${listing.minimumCharterDays
-              ? `Minimum ${escapeHtml(listing.minimumCharterDays)} day(s)`
-              : "Flexible charter duration"}
+            ${
+              listing.minimumCharterDays !== null &&
+              listing.minimumCharterDays !== undefined &&
+              listing.maximumCharterDays !== null &&
+              listing.maximumCharterDays !== undefined
+                ? `${escapeHtml(listing.minimumCharterDays)}–${escapeHtml(listing.maximumCharterDays)} day charter`
+                : listing.minimumCharterDays !== null &&
+                  listing.minimumCharterDays !== undefined
+                  ? `Minimum ${escapeHtml(listing.minimumCharterDays)} day charter`
+                  : listing.maximumCharterDays !== null &&
+                    listing.maximumCharterDays !== undefined
+                    ? `Up to ${escapeHtml(listing.maximumCharterDays)} day charter`
+                    : "Flexible charter duration"
+            }
           </span>
 
           <button
@@ -454,6 +469,118 @@
     }
   }
 
+  async function loadCharterEnquiryOffers(enquiryId) {
+    const enquiry = state.enquiries.find(
+      item => String(item.id) === String(enquiryId)
+    );
+
+    if (!enquiry) {
+      throw new Error(
+        "Charter enquiry could not be found."
+      );
+    }
+
+    state.viewingEnquiryOffersId = Number(enquiryId);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/enquiries/${encodeURIComponent(enquiryId)}/offers`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Charter offers API returned HTTP ${response.status}`
+        );
+      }
+
+      enquiry.offers = Array.isArray(result.data)
+        ? result.data
+        : [];
+
+      renderCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Charter enquiry offers error:",
+        error
+      );
+
+      state.viewingEnquiryOffersId = null;
+
+      alert(
+        error.message ||
+        "Unable to load charter offers."
+      );
+    }
+  }
+
+  async function loadIncomingCharterEnquiryOffers(enquiryId) {
+    const enquiry = state.incomingEnquiries.find(
+      item => String(item.id) === String(enquiryId)
+    );
+
+    if (!enquiry) {
+      throw new Error(
+        "Incoming charter enquiry could not be found."
+      );
+    }
+
+    state.incomingViewingOffersId = Number(enquiryId);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/enquiries/${encodeURIComponent(enquiryId)}/offers`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Charter offers API returned HTTP ${response.status}`
+        );
+      }
+
+      enquiry.offers = Array.isArray(result.data)
+        ? result.data
+        : [];
+
+      renderIncomingCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Incoming charter enquiry offers error:",
+        error
+      );
+
+      state.incomingViewingOffersId = null;
+
+      alert(
+        error.message ||
+        "Unable to load charter offers."
+      );
+    }
+  }
+
   async function loadIncomingCharterEnquiries() {
     if (state.loadingIncomingEnquiries) return;
 
@@ -561,82 +688,1036 @@
       return;
     }
 
-    body.innerHTML = state.incomingEnquiries.map(enquiry => `
-      <article class="marketplace-enquiry-card marketplace-incoming-enquiry">
-        <div class="marketplace-enquiry-header">
-          <div>
-            <div class="card-title">
-              ${escapeHtml(enquiry.listingTitle || "Charter enquiry")}
-            </div>
-            <div class="muted small">
-              ${escapeHtml(enquiry.vesselName || "Unknown vessel")}
-              ${enquiry.vesselCode
-                ? ` · ${escapeHtml(enquiry.vesselCode)}`
-                : ""}
-            </div>
-          </div>
+    body.innerHTML = state.incomingEnquiries.map(enquiry => {
+      const closedStatuses = [
+        "accepted",
+        "rejected",
+        "withdrawn",
+        "closed",
+        "offer_made"
+      ];
 
-          <span class="badge">
-            ${escapeHtml(formatLabel(enquiry.status))}
-          </span>
-        </div>
+      const canMakeOffer =
+        !closedStatuses.includes(enquiry.status);
 
-        <div class="marketplace-enquiry-details">
-          <div>
-            <span class="muted small">Requester</span>
-            <strong>
-              User #${escapeHtml(enquiry.requesterUserId)}
-            </strong>
-          </div>
-
-          <div>
-            <span class="muted small">Cargo</span>
-            <strong>
-              ${escapeHtml(enquiry.cargoType || "Not specified")}
-            </strong>
-          </div>
-
-          <div>
-            <span class="muted small">Quantity</span>
-            <strong>
-              ${enquiry.cargoQuantityTons != null
-                ? `${escapeHtml(enquiry.cargoQuantityTons)} tons`
-                : "Not specified"}
-            </strong>
-          </div>
-
-          <div>
-            <span class="muted small">Requested dates</span>
-            <strong>
-              ${formatDate(enquiry.requestedStartDate)}
-              ${enquiry.requestedEndDate
-                ? ` → ${formatDate(enquiry.requestedEndDate)}`
-                : ""}
-            </strong>
-          </div>
-
-          <div>
-            <span class="muted small">Received</span>
-            <strong>
-              ${formatDate(enquiry.createdAt)}
-            </strong>
-          </div>
-        </div>
-
-        ${
-          enquiry.message
-            ? `
-              <div class="marketplace-enquiry-message">
-                <span class="muted small">Message</span>
-                <p>${escapeHtml(enquiry.message)}</p>
+      return `
+        <article
+          class="marketplace-enquiry-card marketplace-incoming-enquiry"
+          data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+        >
+          <div class="marketplace-enquiry-header">
+            <div>
+              <div class="card-title">
+                ${escapeHtml(enquiry.listingTitle || "Charter enquiry")}
               </div>
-            `
-            : ""
-        }
-      </article>
-    `).join("");
+              <div class="muted small">
+                ${escapeHtml(enquiry.vesselName || "Unknown vessel")}
+                ${enquiry.vesselCode
+                  ? ` · ${escapeHtml(enquiry.vesselCode)}`
+                  : ""}
+              </div>
+            </div>
+
+            <span class="badge">
+              ${escapeHtml(formatLabel(enquiry.status))}
+            </span>
+          </div>
+
+          <div class="marketplace-enquiry-details">
+            <div>
+              <span class="muted small">Requester</span>
+              <strong>
+                User #${escapeHtml(enquiry.requesterUserId)}
+              </strong>
+            </div>
+
+            <div>
+              <span class="muted small">Cargo</span>
+              <strong>
+                ${escapeHtml(enquiry.cargoType || "Not specified")}
+              </strong>
+            </div>
+
+            <div>
+              <span class="muted small">Quantity</span>
+              <strong>
+                ${enquiry.cargoQuantityTons != null
+                  ? `${escapeHtml(enquiry.cargoQuantityTons)} tons`
+                  : "Not specified"}
+              </strong>
+            </div>
+
+            <div>
+              <span class="muted small">Requested dates</span>
+              <strong>
+                ${formatDate(enquiry.requestedStartDate)}
+                ${enquiry.requestedEndDate
+                  ? ` → ${formatDate(enquiry.requestedEndDate)}`
+                  : ""}
+              </strong>
+            </div>
+
+            <div>
+              <span class="muted small">Received</span>
+              <strong>
+                ${formatDate(enquiry.createdAt)}
+              </strong>
+            </div>
+          </div>
+
+          ${
+            enquiry.message
+              ? `
+                <div class="marketplace-enquiry-message">
+                  <span class="muted small">Message</span>
+                  <p>${escapeHtml(enquiry.message)}</p>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            canMakeOffer
+              ? `
+                <div class="marketplace-enquiry-actions">
+                  <button
+                    type="button"
+                    class="btn secondary marketplace-offer-toggle"
+                    data-charter-offer-toggle
+                    data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                  >
+                    Make Offer
+                  </button>
+                </div>
+
+                <form
+                  class="marketplace-offer-form"
+                  data-charter-offer-form
+                  data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                  hidden
+                >
+                  <div class="marketplace-form-head">
+                    <div>
+                      <strong>Make Charter Offer</strong>
+                      <div class="muted small">
+                        Submit the initial commercial offer for this enquiry.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="btn ghost"
+                      data-charter-offer-cancel
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div class="marketplace-form-grid">
+                    <div class="marketplace-field">
+                      <label class="muted small">
+                        Offer Amount
+                      </label>
+                      <input
+                        type="number"
+                        name="amount"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g. 8500"
+                      >
+                    </div>
+
+                    <div class="marketplace-field">
+                      <label class="muted small">
+                        Currency
+                      </label>
+                      <input
+                        type="text"
+                        name="currencyCode"
+                        value="USD"
+                        maxlength="3"
+                        placeholder="USD"
+                      >
+                    </div>
+
+                    <div class="marketplace-field">
+                      <label class="muted small">
+                        Rate Unit
+                      </label>
+                      <select name="rateUnit">
+                        <option value="">Select rate unit</option>
+                        <option value="per_day">Per day</option>
+                        <option value="per_voyage">Per voyage</option>
+                        <option value="per_metric_ton">Per metric ton</option>
+                        <option value="lump_sum">Lump sum</option>
+                      </select>
+                    </div>
+
+                    <div class="marketplace-field">
+                      <label class="muted small">
+                        Charter Days
+                      </label>
+                      <input
+                        type="number"
+                        name="charterDays"
+                        min="1"
+                        step="1"
+                        placeholder="e.g. 7"
+                      >
+                    </div>
+
+                    <div class="marketplace-field">
+                      <label class="muted small">
+                        Offer Expires
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="expiresAt"
+                      >
+                    </div>
+
+                    <div class="marketplace-field marketplace-field-wide">
+                      <label class="muted small">
+                        Terms
+                      </label>
+                      <textarea
+                        name="terms"
+                        rows="4"
+                        placeholder="Enter the commercial terms, conditions or other important details."
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <div
+                    class="marketplace-form-message muted small"
+                    data-charter-offer-message
+                  ></div>
+
+
+              <div class="marketplace-form-actions">
+                    <button
+                      type="submit"
+                      class="btn"
+                    >
+                      Submit Offer
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn ghost"
+                      data-charter-offer-cancel
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              `
+              : ""
+          }
+
+          ${
+            ["offer_made", "negotiating"].includes(
+              enquiry.status
+            )
+              ? `
+                <div class="marketplace-enquiry-actions">
+                  <button
+                    type="button"
+                    class="btn secondary"
+                    data-charter-incoming-offers
+                    data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                  >
+                    ${
+                      state.incomingViewingOffersId === Number(enquiry.id)
+                        ? "Refresh Negotiation"
+                        : "View Negotiation"
+                    }
+                  </button>
+                </div>
+
+                ${
+                  state.incomingViewingOffersId === Number(enquiry.id)
+                    ? `
+                      <div class="marketplace-offer-history">
+                        <div class="marketplace-form-head">
+                          <div>
+                            <strong>Charter Negotiation</strong>
+                            <div class="muted small">
+                              Review the offer history and respond to the latest requester offer.
+                            </div>
+                          </div>
+                        </div>
+
+                        ${
+                          Array.isArray(enquiry.offers) &&
+                          enquiry.offers.length
+                            ? enquiry.offers.map((offer, index) => {
+                                const isLatest =
+                                  index === enquiry.offers.length - 1;
+
+                                const isPending =
+                                  offer.status === "pending";
+
+                                const isRequesterOffer =
+                                  Number(offer.offeredByUserId) ===
+                                  Number(enquiry.requesterUserId);
+
+                                return `
+                                  <div
+                                    class="marketplace-offer-card"
+                                    data-charter-incoming-offer-id="${escapeHtml(offer.id)}"
+                                  >
+                                    <div class="marketplace-enquiry-header">
+                                      <div>
+                                        <strong>
+                                          ${
+                                            isRequesterOffer
+                                              ? "Requester Offer"
+                                              : "Your Offer"
+                                          }
+                                        </strong>
+
+                                        <div class="muted small">
+                                          Offer #${escapeHtml(offer.id)}
+                                          ${
+                                            offer.createdAt
+                                              ? ` · ${formatDate(offer.createdAt)}`
+                                              : ""
+                                          }
+                                        </div>
+                                      </div>
+
+                                      <span class="badge">
+                                        ${escapeHtml(
+                                          formatLabel(offer.status)
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    <div class="marketplace-enquiry-details">
+                                      <div>
+                                        <span class="muted small">Rate</span>
+                                        <strong>
+                                          ${escapeHtml(
+                                            formatRate(
+                                              offer.amount,
+                                              offer.currencyCode,
+                                              offer.rateUnit
+                                            )
+                                          )}
+                                        </strong>
+                                      </div>
+
+                                      <div>
+                                        <span class="muted small">Charter Days</span>
+                                        <strong>
+                                          ${
+                                            offer.charterDays != null
+                                              ? escapeHtml(offer.charterDays)
+                                              : "—"
+                                          }
+                                        </strong>
+                                      </div>
+
+                                      <div>
+                                        <span class="muted small">Expires</span>
+                                        <strong>
+                                          ${
+                                            offer.expiresAt
+                                              ? formatDate(offer.expiresAt)
+                                              : "—"
+                                          }
+                                        </strong>
+                                      </div>
+                                    </div>
+
+                                    ${
+                                      offer.terms
+                                        ? `
+                                          <div class="marketplace-enquiry-message">
+                                            <span class="muted small">Terms</span>
+                                            <p>${escapeHtml(offer.terms)}</p>
+                                          </div>
+                                        `
+                                        : ""
+                                    }
+
+                                    ${
+                                      isLatest &&
+                                      isPending &&
+                                      isRequesterOffer
+                                        ? `
+                                          <div class="marketplace-form-actions">
+                                            <button
+                                              type="button"
+                                              class="btn"
+                                              data-charter-incoming-offer-accept
+                                              data-charter-offer-id="${escapeHtml(offer.id)}"
+                                            >
+                                              Accept
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              class="btn ghost"
+                                              data-charter-incoming-offer-reject
+                                              data-charter-offer-id="${escapeHtml(offer.id)}"
+                                            >
+                                              Reject
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              class="btn ghost"
+                                              data-charter-incoming-offer-counter
+                                              data-charter-offer-id="${escapeHtml(offer.id)}"
+                                            >
+                                              Counter
+                                            </button>
+                                          </div>
+
+                                          ${
+                                            state.counteringOfferId === Number(offer.id)
+                                              ? `
+                                                <form
+                                                  class="marketplace-form"
+                                                  data-charter-incoming-counter-form
+                                                  data-charter-offer-id="${escapeHtml(offer.id)}"
+                                                  data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                                                  hidden
+                                                >
+                                                  <div class="marketplace-form-head">
+                                                    <div>
+                                                      <strong>Counter Requester Offer</strong>
+                                                      <div class="muted small">
+                                                        Send a revised offer to the requester.
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  <div class="marketplace-form-grid">
+                                                    <label>
+                                                      Amount
+                                                      <input
+                                                        type="number"
+                                                        name="amount"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        placeholder="e.g. 25000"
+                                                      >
+                                                    </label>
+
+                                                    <label>
+                                                      Currency
+                                                      <input
+                                                        type="text"
+                                                        name="currencyCode"
+                                                        maxlength="3"
+                                                        value="USD"
+                                                        placeholder="USD"
+                                                      >
+                                                    </label>
+
+                                                    <label>
+                                                      Rate Unit
+                                                      <select name="rateUnit">
+                                                        <option value="">Select rate unit</option>
+                                                        <option value="per_day">Per Day</option>
+                                                        <option value="per_voyage">Per Voyage</option>
+                                                        <option value="per_metric_ton">Per Metric Ton</option>
+                                                        <option value="lump_sum">Lump Sum</option>
+                                                      </select>
+                                                    </label>
+
+                                                    <label>
+                                                      Charter Days
+                                                      <input
+                                                        type="number"
+                                                        name="charterDays"
+                                                        min="1"
+                                                        step="1"
+                                                        placeholder="e.g. 14"
+                                                      >
+                                                    </label>
+
+                                                    <label>
+                                                      Expires At
+                                                      <input
+                                                        type="datetime-local"
+                                                        name="expiresAt"
+                                                      >
+                                                    </label>
+                                                  </div>
+
+                                                  <label>
+                                                    Terms
+                                                    <textarea
+                                                      name="terms"
+                                                      rows="4"
+                                                      placeholder="Enter revised terms or conditions..."
+                                                    ></textarea>
+                                                  </label>
+
+                                                  <div
+                                                    class="marketplace-form-message muted small"
+                                                    data-charter-incoming-counter-message
+                                                  ></div>
+
+                                                  <div class="marketplace-form-actions">
+                                                    <button
+                                                      type="submit"
+                                                      class="btn"
+                                                    >
+                                                      Submit Counter
+                                                    </button>
+
+                                                    <button
+                                                      type="button"
+                                                      class="btn ghost"
+                                                      data-charter-incoming-counter-cancel
+                                                    >
+                                                      Cancel
+                                                    </button>
+                                                  </div>
+                                                </form>
+                                              `
+                                              : ""
+                                          }
+                                        `
+                                        : ""
+                                    }
+                                  </div>
+                                `;
+                              }).join("")
+                            : `
+                              <div class="marketplace-empty muted">
+                                No charter offers were found for this enquiry.
+                              </div>
+                            `
+                        }
+                      </div>
+                    `
+                    : ""
+                }
+              `
+              : ""
+          }
+        </article>
+      `;
+    }).join("");
 
     renderIncomingPagination();
+  }
+
+  function openIncomingCharterCounterForm(offer) {
+    if (!offer || !offer.id) {
+      alert("Charter offer could not be found.");
+      return;
+    }
+
+    state.counteringOfferId = Number(offer.id);
+
+    renderIncomingCharterEnquiries();
+
+    const form = document.querySelector(
+      `[data-charter-incoming-counter-form][data-charter-offer-id="${CSS.escape(String(offer.id))}"]`
+    );
+
+    if (!form) {
+      console.warn(
+        "Incoming charter counter form could not be found."
+      );
+      return;
+    }
+
+    const amountInput = form.elements.amount;
+    if (amountInput) {
+      amountInput.value =
+        offer.amount === null || offer.amount === undefined
+          ? ""
+          : String(offer.amount);
+    }
+
+    const currencyInput = form.elements.currencyCode;
+    if (currencyInput) {
+      currencyInput.value =
+        offer.currencyCode || "USD";
+    }
+
+    const rateUnitInput = form.elements.rateUnit;
+    if (rateUnitInput) {
+      rateUnitInput.value =
+        offer.rateUnit || "";
+    }
+
+    const charterDaysInput = form.elements.charterDays;
+    if (charterDaysInput) {
+      charterDaysInput.value =
+        offer.charterDays === null ||
+        offer.charterDays === undefined
+          ? ""
+          : String(offer.charterDays);
+    }
+
+    const termsInput = form.elements.terms;
+    if (termsInput) {
+      termsInput.value =
+        offer.terms || "";
+    }
+
+    const expiresAtInput = form.elements.expiresAt;
+    if (expiresAtInput && offer.expiresAt) {
+      const expiry = new Date(offer.expiresAt);
+
+      if (!Number.isNaN(expiry.getTime())) {
+        const localValue =
+          new Date(
+            expiry.getTime() -
+            expiry.getTimezoneOffset() * 60000
+          )
+            .toISOString()
+            .slice(0, 16);
+
+        expiresAtInput.value = localValue;
+      }
+    }
+
+    form.hidden = false;
+
+    form.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+  }
+
+  async function acceptIncomingCharterOffer(offerId) {
+    if (!offerId) return;
+
+    if (!confirm("Accept this charter offer?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/accept`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Unable to accept charter offer (HTTP ${response.status})`
+        );
+      }
+
+      alert("Charter offer accepted successfully.");
+
+      state.incomingViewingOffersId = null;
+
+      await loadIncomingCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Incoming charter offer acceptance error:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to accept charter offer."
+      );
+    }
+  }
+
+  async function rejectIncomingCharterOffer(offerId) {
+    if (!offerId) return;
+
+    if (!confirm("Reject this charter offer?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/reject`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Unable to reject charter offer (HTTP ${response.status})`
+        );
+      }
+
+      alert("Charter offer rejected successfully.");
+
+      state.incomingViewingOffersId = null;
+
+      await loadIncomingCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Incoming charter offer rejection error:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to reject charter offer."
+      );
+    }
+  }
+
+  async function submitIncomingCharterCounterOffer(event) {
+    event.preventDefault();
+
+    const form = event.target.closest(
+      "[data-charter-incoming-counter-form]"
+    );
+
+    if (!form) return;
+
+    const offerId =
+      form.dataset.charterOfferId;
+
+    const enquiryId =
+      form.dataset.charterEnquiryId;
+
+    const message =
+      form.querySelector(
+        "[data-charter-incoming-counter-message]"
+      );
+
+    const submitButton =
+      form.querySelector('button[type="submit"]');
+
+    if (!offerId || !enquiryId) {
+      if (message) {
+        message.textContent =
+          "Missing charter offer or enquiry.";
+      }
+      return;
+    }
+
+    const amountInput =
+      form.elements.amount;
+
+    const currencyInput =
+      form.elements.currencyCode;
+
+    const rateUnitInput =
+      form.elements.rateUnit;
+
+    const charterDaysInput =
+      form.elements.charterDays;
+
+    const termsInput =
+      form.elements.terms;
+
+    const expiresAtInput =
+      form.elements.expiresAt;
+
+    const amountValue =
+      amountInput?.value.trim() || "";
+
+    const currencyCode =
+      currencyInput?.value.trim().toUpperCase() || "USD";
+
+    const rateUnit =
+      rateUnitInput?.value.trim() || "";
+
+    const charterDaysValue =
+      charterDaysInput?.value.trim() || "";
+
+    const terms =
+      termsInput?.value.trim() || "";
+
+    const expiresAt =
+      expiresAtInput?.value.trim() || "";
+
+    if (
+      amountValue &&
+      (!Number.isFinite(Number(amountValue)) ||
+        Number(amountValue) <= 0)
+    ) {
+      if (message) {
+        message.textContent =
+          "Counter amount must be a positive number.";
+      }
+      return;
+    }
+
+    if (!/^[A-Z]{3}$/.test(currencyCode)) {
+      if (message) {
+        message.textContent =
+          "Currency must be a 3-letter code such as USD.";
+      }
+      return;
+    }
+
+    if (
+      charterDaysValue &&
+      (!Number.isInteger(Number(charterDaysValue)) ||
+        Number(charterDaysValue) <= 0)
+    ) {
+      if (message) {
+        message.textContent =
+          "Charter days must be a positive whole number.";
+      }
+      return;
+    }
+
+    const payload = {
+      amount: amountValue
+        ? Number(amountValue)
+        : null,
+      currencyCode,
+      rateUnit: rateUnit || null,
+      charterDays: charterDaysValue
+        ? Number(charterDaysValue)
+        : null,
+      terms: terms || null,
+      expiresAt: expiresAt || null
+    };
+
+    try {
+      if (message) {
+        message.textContent =
+          "Submitting counter-offer...";
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+      }
+
+      const response = await fetch(
+        `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/counter`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Unable to create incoming charter counter-offer (HTTP ${response.status})`
+        );
+      }
+
+      alert(
+        "Charter counter-offer submitted successfully."
+      );
+
+      state.counteringOfferId = null;
+
+      await loadIncomingCharterEnquiryOffers(enquiryId);
+
+    } catch (error) {
+      console.error(
+        "Incoming charter counter-offer submission error:",
+        error
+      );
+
+      if (message) {
+        message.textContent =
+          error.message ||
+          "Unable to submit charter counter-offer.";
+      }
+
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
+  }
+
+  async function submitCharterOffer(event) {
+    event.preventDefault();
+
+    const form = event.target.closest(
+      "[data-charter-offer-form]"
+    );
+
+    if (!form) return;
+
+    const enquiryId =
+      form.dataset.charterEnquiryId;
+
+    const message =
+      form.querySelector("[data-charter-offer-message]");
+
+    const submitButton =
+      form.querySelector('button[type="submit"]');
+
+    if (!enquiryId) {
+      if (message) {
+        message.textContent =
+          "Missing charter enquiry.";
+      }
+      return;
+    }
+
+    const amountInput =
+      form.elements.amount;
+
+    const currencyInput =
+      form.elements.currencyCode;
+
+    const rateUnitInput =
+      form.elements.rateUnit;
+
+    const charterDaysInput =
+      form.elements.charterDays;
+
+    const termsInput =
+      form.elements.terms;
+
+    const expiresAtInput =
+      form.elements.expiresAt;
+
+    const amountValue =
+      amountInput?.value.trim() || "";
+
+    const currencyCode =
+      currencyInput?.value.trim().toUpperCase() || "USD";
+
+    const rateUnit =
+      rateUnitInput?.value.trim() || "";
+
+    const charterDaysValue =
+      charterDaysInput?.value.trim() || "";
+
+    const terms =
+      termsInput?.value.trim() || "";
+
+    const expiresAt =
+      expiresAtInput?.value.trim() || "";
+
+    if (
+      amountValue &&
+      (!Number.isFinite(Number(amountValue)) ||
+        Number(amountValue) <= 0)
+    ) {
+      if (message) {
+        message.textContent =
+          "Offer amount must be a positive number.";
+      }
+      return;
+    }
+
+    if (!/^[A-Z]{3}$/.test(currencyCode)) {
+      if (message) {
+        message.textContent =
+          "Currency must be a 3-letter code such as USD.";
+      }
+      return;
+    }
+
+    if (
+      charterDaysValue &&
+      (!Number.isInteger(Number(charterDaysValue)) ||
+        Number(charterDaysValue) <= 0)
+    ) {
+      if (message) {
+        message.textContent =
+          "Charter days must be a positive whole number.";
+      }
+      return;
+    }
+
+    const payload = {
+      amount: amountValue
+        ? Number(amountValue)
+        : null,
+      currencyCode,
+      rateUnit: rateUnit || null,
+      charterDays: charterDaysValue
+        ? Number(charterDaysValue)
+        : null,
+      terms: terms || null,
+      expiresAt: expiresAt || null
+    };
+
+    try {
+      if (message) {
+        message.textContent =
+          "Submitting offer...";
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+      }
+
+      const response = await fetch(
+        `/api/charter/enquiries/${encodeURIComponent(enquiryId)}/offers`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          "Unable to create charter offer."
+        );
+      }
+
+      alert("Charter offer submitted successfully.");
+
+      await loadIncomingCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Charter offer submission error:",
+        error
+      );
+
+      if (message) {
+        message.textContent =
+          error.message ||
+          "Unable to submit charter offer.";
+      }
+
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
   }
 
   function renderIncomingPagination() {
@@ -679,10 +1760,360 @@
     body.appendChild(pagination);
   }
 
-  function renderCharterEnquiries() {
+  async function acceptCharterOffer(offerId) {
+    if (!offerId) return;
+
+    if (!confirm("Accept this charter offer?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/accept`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Unable to accept charter offer (HTTP ${response.status})`
+        );
+      }
+
+      alert("Charter offer accepted successfully.");
+
+      state.viewingEnquiryOffersId = null;
+
+      await loadCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Charter offer acceptance error:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to accept charter offer."
+      );
+    }
+  }
+
+  async function rejectCharterOffer(offerId) {
+    if (!offerId) return;
+
+    if (!confirm("Reject this charter offer?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/reject`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Accept": "application/json"
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          `Unable to reject charter offer (HTTP ${response.status})`
+        );
+      }
+
+      alert("Charter offer rejected successfully.");
+
+      state.viewingEnquiryOffersId = null;
+
+      await loadCharterEnquiries();
+
+    } catch (error) {
+      console.error(
+        "Charter offer rejection error:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to reject charter offer."
+      );
+    }
+  }
+  function openCharterCounterForm(offer) {
+    if (!offer || !offer.id) {
+      alert("Charter offer could not be found.");
+      return;
+    }
+
+    state.counteringOfferId = Number(offer.id);
+
+    renderCharterEnquiries();
+
+    const form = document.querySelector(
+      `[data-charter-counter-form][data-charter-offer-id="${CSS.escape(String(offer.id))}"]`
+    );
+
+    if (!form) {
+      console.warn(
+        "Charter counter form could not be found."
+      );
+      return;
+    }
+
+    const amountInput = form.elements.amount;
+    if (amountInput) {
+      amountInput.value =
+        offer.amount === null || offer.amount === undefined
+          ? ""
+          : String(offer.amount);
+    }
+
+    const currencyInput = form.elements.currencyCode;
+    if (currencyInput) {
+      currencyInput.value =
+        offer.currencyCode || "USD";
+    }
+
+    const rateUnitInput = form.elements.rateUnit;
+    if (rateUnitInput) {
+      rateUnitInput.value =
+        offer.rateUnit || "";
+    }
+
+    const charterDaysInput = form.elements.charterDays;
+    if (charterDaysInput) {
+      charterDaysInput.value =
+        offer.charterDays === null ||
+        offer.charterDays === undefined
+          ? ""
+          : String(offer.charterDays);
+    }
+
+    const termsInput = form.elements.terms;
+    if (termsInput) {
+      termsInput.value =
+        offer.terms || "";
+    }
+
+    const expiresAtInput = form.elements.expiresAt;
+    if (expiresAtInput && offer.expiresAt) {
+      const expiry = new Date(offer.expiresAt);
+
+      if (!Number.isNaN(expiry.getTime())) {
+        const localValue =
+          new Date(
+            expiry.getTime() -
+            expiry.getTimezoneOffset() * 60000
+          )
+            .toISOString()
+            .slice(0, 16);
+
+        expiresAtInput.value = localValue;
+      }
+    }
+
+    form.hidden = false;
+
+    form.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+  }
+
+
+  async function submitCharterCounterOffer(event) {
+  event.preventDefault();
+
+  const form = event.target.closest(
+    "[data-charter-counter-form]"
+  );
+
+  if (!form) return;
+
+  const offerId =
+    form.dataset.charterOfferId;
+
+  const enquiryId =
+    form.dataset.charterEnquiryId;
+
+  const message =
+    form.querySelector("[data-charter-counter-message]");
+
+  const submitButton =
+    form.querySelector('button[type="submit"]');
+
+  if (!offerId || !enquiryId) {
+    if (message) {
+      message.textContent =
+        "Missing charter offer or enquiry.";
+    }
+    return;
+  }
+
+  const amountInput =
+    form.elements.amount;
+
+  const currencyInput =
+    form.elements.currencyCode;
+
+  const rateUnitInput =
+    form.elements.rateUnit;
+
+  const charterDaysInput =
+    form.elements.charterDays;
+
+  const termsInput =
+    form.elements.terms;
+
+  const expiresAtInput =
+    form.elements.expiresAt;
+
+  const amountValue =
+    amountInput?.value.trim() || "";
+
+  const currencyCode =
+    currencyInput?.value.trim().toUpperCase() || "USD";
+
+  const rateUnit =
+    rateUnitInput?.value.trim() || "";
+
+  const charterDaysValue =
+    charterDaysInput?.value.trim() || "";
+
+  const terms =
+    termsInput?.value.trim() || "";
+
+  const expiresAt =
+    expiresAtInput?.value.trim() || "";
+
+  if (
+    amountValue &&
+    (!Number.isFinite(Number(amountValue)) ||
+      Number(amountValue) <= 0)
+  ) {
+    if (message) {
+      message.textContent =
+        "Counter amount must be a positive number.";
+    }
+    return;
+  }
+
+  if (!/^[A-Z]{3}$/.test(currencyCode)) {
+    if (message) {
+      message.textContent =
+        "Currency must be a 3-letter code such as USD.";
+    }
+    return;
+  }
+
+  if (
+    charterDaysValue &&
+    (!Number.isInteger(Number(charterDaysValue)) ||
+      Number(charterDaysValue) <= 0)
+  ) {
+    if (message) {
+      message.textContent =
+        "Charter days must be a positive whole number.";
+    }
+    return;
+  }
+
+  const payload = {
+    amount: amountValue
+      ? Number(amountValue)
+      : null,
+    currencyCode,
+    rateUnit: rateUnit || null,
+    charterDays: charterDaysValue
+      ? Number(charterDaysValue)
+      : null,
+    terms: terms || null,
+    expiresAt: expiresAt || null
+  };
+
+  try {
+    if (message) {
+      message.textContent =
+        "Submitting counter-offer...";
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    const response = await fetch(
+      `${API_BASE}/api/charter/offers/${encodeURIComponent(offerId)}/counter`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.error ||
+        result.message ||
+        `Unable to create charter counter-offer (HTTP ${response.status})`
+      );
+    }
+
+    alert(
+      "Charter counter-offer submitted successfully."
+    );
+
+    state.counteringOfferId = null;
+
+    await loadCharterEnquiryOffers(enquiryId);
+
+  } catch (error) {
+    console.error(
+      "Charter counter-offer submission error:",
+      error
+    );
+
+    if (message) {
+      message.textContent =
+        error.message ||
+        "Unable to submit charter counter-offer.";
+    }
+
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+  }
+}
+
+function renderCharterEnquiries() {
     const body = $("charterEnquiriesBody");
 
     if (!body) return;
+
+    const currentUser = currentDashboardUser();
+    const currentUserId = Number(currentUser?.id);
 
     if (!state.enquiries.length) {
       setEnquiriesMessage(
@@ -753,13 +2184,367 @@
                 )}
               </span>
             </div>
+
+                  ${
+                state.viewingEnquiryOffersId === Number(enquiry.id)
+                  ? `
+                    <div class="marketplace-enquiry-offers">
+                      <div class="marketplace-enquiry-header">
+                        <strong>Charter Offers</strong>
+                      </div>
+
+                      ${
+                        Array.isArray(enquiry.offers) &&
+                        enquiry.offers.length
+                          ? enquiry.offers.map(offer => `
+                              <div class="marketplace-enquiry-card">
+                                <div class="marketplace-enquiry-details">
+                                  <strong>
+                                    ${escapeHtml(
+                                      formatRate(
+                                        offer.amount,
+                                        offer.currencyCode,
+                                        offer.rateUnit
+                                      )
+                                    )}
+                                  </strong>
+
+                                  <div class="muted small">
+                                    ${
+                                      offer.charterDays
+                                        ? `${escapeHtml(offer.charterDays)} charter days`
+                                        : "Charter days not specified"
+                                    }
+                                  </div>
+                                </div>
+
+                                ${
+                                  offer.terms
+                                    ? `
+                                      <div class="marketplace-enquiry-message">
+                                        ${escapeHtml(offer.terms)}
+                                      </div>
+                                    `
+                                    : ""
+                                }
+
+                                <div class="marketplace-listing-footer">
+                                  <span class="muted small">
+                                    Offered ${escapeHtml(
+                                      formatDate(offer.createdAt)
+                                    )}
+                                  </span>
+
+                                  <span class="marketplace-status ${escapeHtml(
+                                    offer.status || "pending"
+                                  )}">
+                                    ${escapeHtml(
+                                      formatLabel(offer.status)
+                                    )}
+                                  </span>
+                                </div>
+
+                                ${
+                                  offer.expiresAt
+                                    ? `
+                                      <div class="muted small">
+                                        Expires ${escapeHtml(
+                                          formatDate(offer.expiresAt)
+                                        )}
+                                      </div>
+                                    `
+                                    : ""
+                                }
+
+                                ${
+                                  Number(offer.offeredByUserId) !== currentUserId &&
+                                  offer.status === "pending" &&
+                                  Array.isArray(enquiry.offers) &&
+                                  offer.id === enquiry.offers[enquiry.offers.length - 1]?.id
+                                    ? `
+                                      <div class="marketplace-form-actions">
+                                        <button
+                                          type="button"
+                                          class="btn"
+                                          data-charter-offer-accept
+                                          data-charter-offer-id="${escapeHtml(offer.id)}"
+                                        >
+                                          Accept
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          class="btn ghost"
+                                          data-charter-offer-reject
+                                          data-charter-offer-id="${escapeHtml(offer.id)}"
+                                        >
+                                          Reject
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          class="btn ghost"
+                                          data-charter-offer-counter
+                                          data-charter-offer-id="${escapeHtml(offer.id)}"
+                                        >
+                                          Counter
+                                        </button>
+                                      </div>
+                                        ${
+                                          state.counteringOfferId === Number(offer.id)
+                                            ? `
+                                              <form
+                                                class="marketplace-form"
+                                                data-charter-counter-form
+                                                data-charter-offer-id="${escapeHtml(offer.id)}"
+                                                data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                                              >
+                                                <div class="marketplace-form-head">
+                                                  <strong>Counter Offer</strong>
+                                                </div>
+
+                                                <div class="marketplace-form-grid">
+                                                  <div class="marketplace-field">
+                                                    <label class="muted small">Offer Amount</label>
+                                                    <input
+                                                      type="number"
+                                                      name="amount"
+                                                      min="0"
+                                                      step="0.01"
+                                                      placeholder="e.g. 8500"
+                                                    >
+                                                  </div>
+
+                                                  <div class="marketplace-field">
+                                                    <label class="muted small">Currency</label>
+                                                    <input
+                                                      type="text"
+                                                      name="currencyCode"
+                                                      value="USD"
+                                                      maxlength="3"
+                                                      placeholder="USD"
+                                                    >
+                                                  </div>
+
+                                                  <div class="marketplace-field">
+                                                    <label class="muted small">Rate Unit</label>
+                                                    <select name="rateUnit">
+                                                      <option value="">Select rate unit</option>
+                                                      <option value="per_day">Per day</option>
+                                                      <option value="per_voyage">Per voyage</option>
+                                                      <option value="per_metric_ton">Per metric ton</option>
+                                                      <option value="lump_sum">Lump sum</option>
+                                                    </select>
+                                                  </div>
+
+                                                  <div class="marketplace-field">
+                                                    <label class="muted small">Charter Days</label>
+                                                    <input
+                                                      type="number"
+                                                      name="charterDays"
+                                                      min="1"
+                                                      step="1"
+                                                      placeholder="e.g. 7"
+                                                    >
+                                                  </div>
+
+                                                  <div class="marketplace-field">
+                                                    <label class="muted small">Offer Expires</label>
+                                                    <input
+                                                      type="datetime-local"
+                                                      name="expiresAt"
+                                                    >
+                                                  </div>
+
+                                                  <div class="marketplace-field marketplace-field-wide">
+                                                    <label class="muted small">Terms</label>
+                                                    <textarea
+                                                      name="terms"
+                                                      rows="4"
+                                                      placeholder="Enter the counter-offer terms, conditions or other important details."
+                                                    ></textarea>
+                                                  </div>
+                                                </div>
+
+                                                <div
+                                                  class="marketplace-form-message muted small"
+                                                  data-charter-counter-message
+                                                ></div>
+
+                                                <div class="marketplace-form-actions">
+                                                  <button
+                                                    type="submit"
+                                                    class="btn"
+                                                  >
+                                                    Submit Counter
+                                                  </button>
+
+                                                  <button
+                                                    type="button"
+                                                    class="btn ghost"
+                                                    data-charter-counter-cancel
+                                                  >
+                                                    Cancel
+                                                  </button>
+                                                </div>
+                                              </form>
+                                            `
+                                            : ""
+                                        }
+                                    `
+                                    : ""
+                                }
+                              </div>
+                            `).join("")
+                          : `
+                            <div class="marketplace-empty muted">
+                              No charter offers are available yet.
+                            </div>
+                          `
+                      }
+                    </div>
+                  `
+                  : ""
+              }
+
+            <div class="marketplace-form-actions">
+              ${
+                ["submitted", "under_review"].includes(
+                  enquiry.status
+                )
+                  ? `
+                    <button
+                      type="button"
+                      class="btn ghost"
+                      data-charter-enquiry-edit
+                      data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn ghost"
+                      data-charter-enquiry-withdraw
+                      data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                    >
+                      Withdraw
+                    </button>
+                  `
+                  : ""
+              }
+
+              ${
+                ["offer_made", "negotiating"].includes(
+                  enquiry.status
+                )
+                  ? `
+                    <button
+                      type="button"
+                      class="btn ghost"
+                      data-charter-enquiry-offers
+                      data-charter-enquiry-id="${escapeHtml(enquiry.id)}"
+                    >
+                      View Offer
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
           </article>
         `).join("")}
       </div>
     `;
   }
 
+    function openEnquiryEditForm(enquiryId) {
+      const enquiry = state.enquiries.find(
+        item => String(item.id) === String(enquiryId)
+      );
+
+      if (!enquiry) {
+        alert("Charter enquiry could not be found.");
+        return;
+      }
+
+      const form = $("charterEnquiryForm");
+
+      if (!form) {
+        console.warn(
+          "Charter enquiry form is not present in the dashboard."
+        );
+        return;
+      }
+
+      state.editingEnquiryId = Number(enquiry.id);
+
+      const listingInput = $("charterEnquiryListingId");
+      if (listingInput) {
+        listingInput.value = String(enquiry.listingId || "");
+      }
+
+      const selected = $("charterSelectedVessel");
+      if (selected) {
+        selected.textContent = `${enquiry.vesselName || enquiry.vesselCode || "Vessel"} — ${enquiry.listingTitle || "Charter listing"}`;
+      }
+
+      const cargoType = $("charterEnquiryCargoType");
+      if (cargoType) {
+        cargoType.value = enquiry.cargoType || "";
+      }
+
+      const cargoQuantity = $("charterEnquiryCargoQuantity");
+      if (cargoQuantity) {
+        cargoQuantity.value = enquiry.cargoQuantityTons ?? "";
+      }
+
+      const originPort = $("charterEnquiryOriginPortId");
+      if (originPort) {
+        originPort.value = enquiry.originPortId ?? "";
+      }
+
+      const destinationPort = $("charterEnquiryDestinationPortId");
+      if (destinationPort) {
+        destinationPort.value = enquiry.destinationPortId ?? "";
+      }
+
+      const startDate = $("charterEnquiryStartDate");
+      if (startDate) {
+        startDate.value = enquiry.requestedStartDate || "";
+      }
+
+      const endDate = $("charterEnquiryEndDate");
+      if (endDate) {
+        endDate.value = enquiry.requestedEndDate || "";
+      }
+
+      const message = $("charterEnquiryMessage");
+      if (message) {
+        message.value = enquiry.message || "";
+      }
+
+      const heading = form.querySelector(".marketplace-form-head strong");
+      if (heading) {
+        heading.textContent = "Edit Charter Enquiry";
+      }
+
+      const submitButton = form.querySelector(
+        "button[type='submit']"
+      );
+
+      if (submitButton) {
+        submitButton.textContent = "Save Changes";
+      }
+
+      form.hidden = false;
+
+      form.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
   function openEnquiryForm(listingId) {
+    state.editingEnquiryId = null;
     const listing = state.listings.find(
       item => String(item.id) === String(listingId)
     );
@@ -800,112 +2585,231 @@
 
     if (!form) return;
 
+    state.editingEnquiryId = null;
+
+    const heading = form.querySelector(
+      ".marketplace-form-head strong"
+    );
+
+    if (heading) {
+      heading.textContent = "Request Charter";
+    }
+
+    const submitButton = form.querySelector(
+      "button[type='submit']"
+    );
+
+    if (submitButton) {
+      submitButton.textContent = "Submit Charter Enquiry";
+    }
+
     form.hidden = true;
   }
 
   async function submitCharterEnquiry(event) {
-    event.preventDefault();
+      event.preventDefault();
 
-    const form = event.currentTarget;
+      const form = event.currentTarget;
 
-    const listingId = Number(
-      $("charterEnquiryListingId")?.value
-    );
+      const editingEnquiryId = state.editingEnquiryId;
 
-    const cargoType =
-      $("charterEnquiryCargoType")?.value?.trim() || null;
+      const listingId = Number(
+        $("charterEnquiryListingId")?.value
+      );
 
-    const cargoQuantityValue =
-      $("charterEnquiryCargoQuantity")?.value?.trim();
+      const cargoType =
+        $("charterEnquiryCargoType")?.value?.trim() || null;
 
-    const cargoQuantityTons =
-      cargoQuantityValue
-        ? Number(cargoQuantityValue)
+      const cargoQuantityValue =
+        $("charterEnquiryCargoQuantity")?.value?.trim();
+
+      const cargoQuantityTons =
+        cargoQuantityValue
+          ? Number(cargoQuantityValue)
+          : null;
+
+      const originPortIdValue =
+        $("charterEnquiryOriginPortId")?.value?.trim();
+
+      const destinationPortIdValue =
+        $("charterEnquiryDestinationPortId")?.value?.trim();
+
+      const requestedStartDate =
+        $("charterEnquiryStartDate")?.value || null;
+
+      const requestedEndDate =
+        $("charterEnquiryEndDate")?.value || null;
+
+      const message =
+        $("charterEnquiryMessage")?.value?.trim() || null;
+
+      if (
+        !editingEnquiryId &&
+        (!Number.isInteger(listingId) || listingId <= 0)
+      ) {
+        alert("Please select a valid vessel listing.");
+        return;
+      }
+
+      if (
+        cargoQuantityValue &&
+        (!Number.isFinite(cargoQuantityTons) ||
+          cargoQuantityTons <= 0)
+      ) {
+        alert("Cargo quantity must be greater than zero.");
+        return;
+      }
+
+      const originPortId = originPortIdValue
+        ? Number(originPortIdValue)
         : null;
 
-    const originPortIdValue =
-      $("charterEnquiryOriginPortId")?.value?.trim();
+      const destinationPortId = destinationPortIdValue
+        ? Number(destinationPortIdValue)
+        : null;
 
-    const destinationPortIdValue =
-      $("charterEnquiryDestinationPortId")?.value?.trim();
+      if (
+        originPortId !== null &&
+        (!Number.isInteger(originPortId) || originPortId <= 0)
+      ) {
+        alert("Origin port ID must be a valid positive number.");
+        return;
+      }
 
-    const requestedStartDate =
-      $("charterEnquiryStartDate")?.value || null;
+      if (
+        destinationPortId !== null &&
+        (!Number.isInteger(destinationPortId) ||
+          destinationPortId <= 0)
+      ) {
+        alert(
+          "Destination port ID must be a valid positive number."
+        );
+        return;
+      }
 
-    const requestedEndDate =
-      $("charterEnquiryEndDate")?.value || null;
+      const submitButton =
+        form.querySelector("button[type='submit']");
 
-    const message =
-      $("charterEnquiryMessage")?.value?.trim() || null;
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = editingEnquiryId
+          ? "Saving..."
+          : "Submitting...";
+      }
 
-    if (!Number.isInteger(listingId) || listingId <= 0) {
-      alert("Please select a valid vessel listing.");
-      return;
+      const payload = {
+        cargoType,
+        cargoQuantityTons,
+        originPortId,
+        destinationPortId,
+        requestedStartDate,
+        requestedEndDate,
+        message
+      };
+
+      try {
+        const url = editingEnquiryId
+          ? `${API_BASE}/api/charter/enquiries/${editingEnquiryId}`
+          : `${API_BASE}/api/charter/enquiries`;
+
+        const method = editingEnquiryId
+          ? "PATCH"
+          : "POST";
+
+        if (!editingEnquiryId) {
+          payload.listingId = listingId;
+        }
+
+        const response = await fetch(
+          url,
+          {
+            method,
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.error ||
+            result.message ||
+            `Charter enquiry returned HTTP ${response.status}`
+          );
+        }
+
+        alert(
+          editingEnquiryId
+            ? "Charter enquiry updated successfully."
+            : "Charter enquiry submitted successfully."
+        );
+
+        state.editingEnquiryId = null;
+
+        form.reset();
+
+        const listingInput = $("charterEnquiryListingId");
+
+        if (listingInput) {
+          listingInput.value = "";
+        }
+
+        const heading =
+          form.querySelector(".marketplace-form-head strong");
+
+        if (heading) {
+          heading.textContent = "Request Charter";
+        }
+
+        if (submitButton) {
+          submitButton.textContent = "Submit Charter Enquiry";
+        }
+
+        closeEnquiryForm();
+
+        await loadCharterEnquiries();
+
+      } catch (error) {
+        console.error(
+          "Charter enquiry submission error:",
+          error
+        );
+
+        alert(
+          error.message ||
+          "Unable to submit charter enquiry."
+        );
+
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = state.editingEnquiryId
+            ? "Save Changes"
+            : "Submit Charter Enquiry";
+        }
+      }
     }
+  async function withdrawCharterEnquiry(enquiryId) {
+    if (!enquiryId) return;
 
-    if (
-      cargoQuantityValue &&
-      (!Number.isFinite(cargoQuantityTons) ||
-        cargoQuantityTons <= 0)
-    ) {
-      alert("Cargo quantity must be greater than zero.");
-      return;
-    }
+    const confirmed = window.confirm(
+      "Withdraw this charter enquiry? This action cannot be undone."
+    );
 
-    const originPortId = originPortIdValue
-      ? Number(originPortIdValue)
-      : null;
-
-    const destinationPortId = destinationPortIdValue
-      ? Number(destinationPortIdValue)
-      : null;
-
-    if (
-      originPortId !== null &&
-      (!Number.isInteger(originPortId) || originPortId <= 0)
-    ) {
-      alert("Origin port ID must be a valid positive number.");
-      return;
-    }
-
-    if (
-      destinationPortId !== null &&
-      (!Number.isInteger(destinationPortId) ||
-        destinationPortId <= 0)
-    ) {
-      alert(
-        "Destination port ID must be a valid positive number."
-      );
-      return;
-    }
-
-    const submitButton =
-      form.querySelector("button[type='submit']");
-
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Submitting...";
-    }
+    if (!confirmed) return;
 
     try {
       const response = await fetch(
-        `${API_BASE}/api/charter/enquiries`,
+        `${API_BASE}/api/charter/enquiries/${enquiryId}/withdraw`,
         {
           method: "POST",
           headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            listingId,
-            cargoType,
-            cargoQuantityTons,
-            originPortId,
-            destinationPortId,
-            requestedStartDate,
-            requestedEndDate,
-            message
-          })
+            "Accept": "application/json"
+          }
         }
       );
 
@@ -913,41 +2817,26 @@
 
       if (!response.ok || !result.success) {
         throw new Error(
+          result.error ||
           result.message ||
-          `Charter enquiry returned HTTP ${response.status}`
+          `Unable to withdraw charter enquiry (HTTP ${response.status})`
         );
       }
 
-      alert("Charter enquiry submitted successfully.");
-
-      form.reset();
-
-      const listingInput = $("charterEnquiryListingId");
-
-      if (listingInput) {
-        listingInput.value = "";
-      }
-
-      closeEnquiryForm();
+      alert("Charter enquiry withdrawn successfully.");
 
       await loadCharterEnquiries();
 
     } catch (error) {
       console.error(
-        "Charter enquiry submission error:",
+        "Charter enquiry withdrawal error:",
         error
       );
 
       alert(
         error.message ||
-        "Unable to submit charter enquiry."
+        "Unable to withdraw charter enquiry."
       );
-
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = "Submit Charter Enquiry";
-      }
     }
   }
 
@@ -1926,7 +3815,159 @@
       }
     });
 
-    const incomingStatus = $("incomingCharterStatus");
+    const charterEnquiriesBody = $("charterEnquiriesBody");
+
+    if (charterEnquiriesBody) {
+      charterEnquiriesBody.addEventListener("click", event => {
+        const editButton =
+          event.target.closest("[data-charter-enquiry-edit]");
+
+        if (!editButton) return;
+
+        const enquiryId =
+          editButton.dataset.charterEnquiryId;
+
+        if (!enquiryId) return;
+
+        openEnquiryEditForm(enquiryId);
+      });
+    }
+
+      if (charterEnquiriesBody) {
+        charterEnquiriesBody.addEventListener("click", event => {
+          const withdrawButton =
+            event.target.closest("[data-charter-enquiry-withdraw]");
+
+          if (!withdrawButton) return;
+
+          const enquiryId =
+            withdrawButton.dataset.charterEnquiryId;
+
+          if (!enquiryId) return;
+
+          withdrawCharterEnquiry(enquiryId);
+        });
+      }
+
+    if (charterEnquiriesBody) {
+        charterEnquiriesBody.addEventListener("click", event => {
+          const offersButton =
+            event.target.closest("[data-charter-enquiry-offers]");
+
+          if (!offersButton) return;
+
+          const enquiryId =
+            offersButton.dataset.charterEnquiryId;
+
+          if (!enquiryId) return;
+
+          loadCharterEnquiryOffers(enquiryId);
+        });
+      }
+
+      if (charterEnquiriesBody) {
+
+        charterEnquiriesBody.addEventListener("click", event => {
+
+          const acceptButton =
+
+            event.target.closest("[data-charter-offer-accept]");
+
+
+          if (!acceptButton) return;
+
+
+          const offerId =
+
+            acceptButton.dataset.charterOfferId;
+
+
+          if (!offerId) return;
+
+
+          acceptCharterOffer(offerId);
+
+        });
+
+      }
+
+
+      if (charterEnquiriesBody) {
+
+        charterEnquiriesBody.addEventListener("click", event => {
+
+          const rejectButton =
+
+            event.target.closest("[data-charter-offer-reject]");
+
+
+          if (!rejectButton) return;
+
+
+          const offerId =
+
+            rejectButton.dataset.charterOfferId;
+
+
+          if (!offerId) return;
+
+
+          rejectCharterOffer(offerId);
+
+        });
+
+      }
+
+
+        if (charterEnquiriesBody) {
+
+          charterEnquiriesBody.addEventListener("click", event => {
+
+            const counterButton =
+              event.target.closest("[data-charter-offer-counter]");
+
+            if (!counterButton) return;
+
+            const offerId =
+              counterButton.dataset.charterOfferId;
+
+            if (!offerId) return;
+
+            const enquiry = state.enquiries.find(
+              item =>
+                Array.isArray(item.offers) &&
+                item.offers.some(
+                  offer =>
+                    String(offer.id) === String(offerId)
+                )
+            );
+
+            if (!enquiry) {
+              alert(
+                "Charter enquiry could not be found."
+              );
+              return;
+            }
+
+            const offer = enquiry.offers.find(
+              item =>
+                String(item.id) === String(offerId)
+            );
+
+            if (!offer) {
+              alert(
+                "Charter offer could not be found."
+              );
+              return;
+            }
+
+            openCharterCounterForm(offer);
+
+          });
+
+        }
+
+      const incomingStatus = $("incomingCharterStatus");
     if (incomingStatus) {
       incomingStatus.addEventListener("change", () => {
         state.incomingStatus = incomingStatus.value;
@@ -1941,6 +3982,137 @@
         const previousButton = event.target.closest("#incomingCharterPrevious");
         const nextButton = event.target.closest("#incomingCharterNext");
 
+        const offerToggle =
+          event.target.closest("[data-charter-offer-toggle]");
+
+        const offerCancel =
+          event.target.closest("[data-charter-offer-cancel]");
+
+          const incomingOffersButton =
+            event.target.closest("[data-charter-incoming-offers]");
+
+          const incomingAcceptButton =
+            event.target.closest(
+              "[data-charter-incoming-offer-accept]"
+            );
+
+          const incomingRejectButton =
+            event.target.closest(
+              "[data-charter-incoming-offer-reject]"
+            );
+
+          const incomingCounterButton =
+            event.target.closest(
+              "[data-charter-incoming-offer-counter]"
+            );
+
+          const incomingCounterCancel =
+            event.target.closest(
+              "[data-charter-incoming-counter-cancel]"
+            );
+
+          if (incomingOffersButton) {
+            const enquiryId =
+              incomingOffersButton.dataset.charterEnquiryId;
+
+            if (!enquiryId) return;
+
+            loadIncomingCharterEnquiryOffers(enquiryId);
+            return;
+          }
+
+          if (incomingAcceptButton) {
+            const offerId =
+              incomingAcceptButton.dataset.charterOfferId;
+
+            if (!offerId) return;
+
+            acceptIncomingCharterOffer(offerId);
+            return;
+          }
+
+          if (incomingRejectButton) {
+            const offerId =
+              incomingRejectButton.dataset.charterOfferId;
+
+            if (!offerId) return;
+
+            rejectIncomingCharterOffer(offerId);
+            return;
+          }
+
+          if (incomingCounterButton) {
+            const offerId =
+              incomingCounterButton.dataset.charterOfferId;
+
+            if (!offerId) return;
+
+            const enquiryId =
+              incomingCounterButton.closest(
+                "[data-charter-enquiry-id]"
+              )?.dataset.charterEnquiryId;
+
+            const enquiry =
+              state.incomingEnquiries.find(
+                item => String(item.id) === String(enquiryId)
+              );
+
+            const offer =
+              enquiry?.offers?.find(
+                item => String(item.id) === String(offerId)
+              );
+
+            if (!offer) {
+              alert("Charter offer could not be found.");
+              return;
+            }
+
+            openIncomingCharterCounterForm(offer);
+            return;
+          }
+
+          if (incomingCounterCancel) {
+            state.counteringOfferId = null;
+            renderIncomingCharterEnquiries();
+            return;
+          }
+
+        if (offerToggle) {
+          const enquiryId =
+            offerToggle.dataset.charterEnquiryId;
+
+          const form =
+            incomingBody.querySelector(
+              `[data-charter-offer-form][data-charter-enquiry-id="${CSS.escape(enquiryId)}"]`
+            );
+
+          if (form) {
+            form.hidden = !form.hidden;
+
+            if (!form.hidden) {
+              form.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+              });
+            }
+          }
+
+          return;
+        }
+
+        if (offerCancel) {
+          const form =
+            offerCancel.closest(
+              "[data-charter-offer-form]"
+            );
+
+          if (form) {
+            form.hidden = true;
+          }
+
+          return;
+        }
+
         if (previousButton && state.incomingPage > 1) {
           state.incomingPage -= 1;
           loadIncomingCharterEnquiries();
@@ -1950,6 +4122,25 @@
         if (nextButton && state.incomingPage < state.incomingTotalPages) {
           state.incomingPage += 1;
           loadIncomingCharterEnquiries();
+        }
+      });
+
+      incomingBody.addEventListener("submit", event => {
+        if (
+          event.target.matches(
+            "[data-charter-offer-form]"
+          )
+        ) {
+          submitCharterOffer(event);
+          return;
+        }
+
+        if (
+          event.target.matches(
+            "[data-charter-incoming-counter-form]"
+          )
+        ) {
+          submitIncomingCharterCounterOffer(event);
         }
       });
     }
